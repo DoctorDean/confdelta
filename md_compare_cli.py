@@ -18,6 +18,7 @@ try:
         MDCompare, SimulationConfig, AnalysisConfig, 
         MDSimulation, NetworkAnalyzer, MDComparator
     )
+    from md_compare_differential import DifferentialAnalyzer, DifferentialConfig
     from utils import PerformanceMonitor, save_analysis_config
 except ImportError:
     print("Error: MD-Compare core modules not found. Ensure proper installation.")
@@ -212,9 +213,98 @@ def run_comparison_analysis(args):
         return 1
 
 
+def run_comprehensive_differential_analysis(args):
+    """Run comprehensive differential analysis between two simulations"""
+    print(f"Running comprehensive differential analysis: {args.sim1} vs {args.sim2}")
+    print("=" * 70)
+    
+    # Create differential configuration
+    diff_config = DifferentialConfig(
+        compare_networks=not args.no_network_comparison,
+        compare_dynamics=not args.no_dynamics_comparison,
+        compare_energetics=not args.no_energetics_comparison,
+        compare_kinetics=not args.no_kinetics_comparison,
+        compare_allosteric=not args.no_allosteric_comparison,
+        perform_statistical_tests=args.statistical_tests,
+        significance_threshold=args.significance_threshold,
+        multiple_comparison_correction=args.multiple_comparison_correction,
+        bootstrap_iterations=args.bootstrap_iterations,
+        create_difference_plots=not args.no_plots,
+        create_publication_figures=args.publication_figures,
+        figure_dpi=args.figure_dpi,
+        create_html_report=not args.no_html_report,
+        export_excel_workbook=args.excel_export,
+        correlation_change_threshold=args.correlation_threshold,
+        efficiency_change_threshold=args.efficiency_threshold,
+        energy_change_threshold=args.energy_threshold
+    )
+    
+    # Create analysis configuration
+    analysis_config = create_analysis_config_from_args(args)
+    
+    # Initialize differential analyzer
+    differential_analyzer = DifferentialAnalyzer(diff_config, args.output)
+    
+    monitor = PerformanceMonitor()
+    
+    try:
+        monitor.start_step("Comprehensive differential analysis")
+        
+        # Run comprehensive differential analysis
+        results = differential_analyzer.run_differential_analysis(
+            args.topology1, args.trajectory1, args.sim1,
+            args.topology2, args.trajectory2, args.sim2,
+            analysis_config
+        )
+        
+        monitor.end_step()
+        
+        # Print executive summary
+        print("\n" + "="*70)
+        print("EXECUTIVE SUMMARY")
+        print("="*70)
+        
+        exec_summary = results.executive_summary
+        print(f"Comparison: {exec_summary['comparison']}")
+        print(f"Total analyses performed: {exec_summary['total_analyses']}")
+        print(f"Significant findings: {exec_summary['significant_findings']}")
+        print(f"Overall similarity score: {exec_summary['overall_similarity']:.3f}")
+        
+        print(f"\nKey insights:")
+        for insight in exec_summary['key_insights']:
+            print(f"  • {insight}")
+        
+        print(f"\nSimilarity scores by analysis type:")
+        for analysis_type, score in results.overall_similarity_scores.items():
+            print(f"  • {analysis_type.title()}: {score:.3f}")
+        
+        print(f"\nMost significant changes:")
+        for analysis_type, changes in results.most_significant_changes.items():
+            if changes:
+                print(f"  • {analysis_type.title()}: {len(changes)} significant changes")
+                top_change = changes[0] if changes else None
+                if top_change:
+                    print(f"    - {top_change.get('description', 'N/A')} (p={top_change.get('significance', 'N/A')})")
+        
+        monitor.print_summary()
+        print(f"\nComplete results available in: {args.output}")
+        print(f"Individual analyses: {args.output}/01_individual_analyses/")
+        print(f"Differential results: {args.output}/02_network_comparisons/ through 06_allosteric_comparisons/")
+        print(f"Comprehensive report: {args.output}/07_comprehensive_report/")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"Error during comprehensive differential analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def run_differential_analysis(args):
-    """Run differential analysis between two specific simulations"""
-    print(f"Running differential analysis: {args.sim1} vs {args.sim2}")
+    """Run basic differential analysis between two specific simulations (legacy)"""
+    print(f"Running basic differential analysis: {args.sim1} vs {args.sim2}")
+    print("Note: For comprehensive differential analysis, use 'differential' command instead of 'diff'")
     
     # Load both simulations
     sim1_config = create_simulation_config_from_args(
@@ -273,7 +363,7 @@ def run_differential_analysis(args):
         monitor.end_step()
         
         # Print summary
-        print(f"\nDifferential Analysis Results:")
+        print(f"\nBasic Differential Analysis Results:")
         print(f"  Increased contacts: {differential_results['n_increased']}")
         print(f"  Decreased contacts: {differential_results['n_decreased']}")
         print(f"  Threshold: {differential_results['threshold_difference']}")
@@ -359,15 +449,27 @@ def main():
         epilog="""
 Examples:
 
-  # Single simulation analysis
+  # Single simulation analysis  
   md-compare single -t system.pdb -x trajectory.xtc -n my_sim -o results/
 
   # Multiple simulation comparison
   md-compare compare -c simulations.json -o comparison_results/
 
-  # Differential analysis
+  # Basic differential analysis (legacy)
   md-compare diff -t1 wt.pdb -x1 wt.xtc -n1 wildtype \\
                   -t2 mut.pdb -x2 mut.xtc -n2 mutant -o diff_results/
+
+  # Comprehensive differential analysis (recommended)
+  md-compare differential -t1 wt.pdb -x1 wt.xtc -n1 "Wild_Type" \\
+                         -t2 mut.pdb -x2 mut.xtc -n2 "V82A_Mutant" \\
+                         -o hiv_wt_vs_v82a --statistical-tests --publication-figures \\
+                         --allosteric-sources A_50 B_50 --allosteric-targets A_25 B_25
+
+  # Drug resistance analysis with focused comparisons
+  md-compare differential -t1 hiv_apo.pdb -x1 apo.xtc -n1 "Apo_State" \\
+                         -t2 hiv_inhibitor.pdb -x2 inhibitor.xtc -n2 "Inhibitor_Bound" \\
+                         -o drug_binding_analysis --excel-export \\
+                         --correlation-threshold 0.15 --efficiency-threshold 0.05
 
   # Generate example configuration
   md-compare example-config -o example_simulations.json
@@ -662,6 +764,99 @@ For more information, visit: https://github.com/yourusername/md-compare
     diff_parser.add_argument('--metastable-states', type=int, default=5,
                             help='Number of metastable states for PCCA+ (default: 5)')
     
+    # Comprehensive differential analysis
+    differential_parser = subparsers.add_parser(
+        'differential',
+        help='Comprehensive differential analysis between two simulations',
+        description='Perform comprehensive comparison including network topology, dynamics, energetics, kinetics, and allosteric communication'
+    )
+    
+    # Required arguments
+    differential_parser.add_argument('-t1', '--topology1', required=True,
+                                   help='Topology file for first simulation (PDB, GRO, etc.)')
+    differential_parser.add_argument('-x1', '--trajectory1', required=True,
+                                   help='Trajectory file for first simulation (XTC, DCD, etc.)')
+    differential_parser.add_argument('-n1', '--sim1', required=True,
+                                   help='Name/identifier for first simulation')
+    differential_parser.add_argument('-t2', '--topology2', required=True,
+                                   help='Topology file for second simulation')
+    differential_parser.add_argument('-x2', '--trajectory2', required=True,
+                                   help='Trajectory file for second simulation')
+    differential_parser.add_argument('-n2', '--sim2', required=True,
+                                   help='Name/identifier for second simulation')
+    differential_parser.add_argument('-o', '--output', default='differential_analysis_results',
+                                   help='Output directory (default: differential_analysis_results)')
+    
+    # Analysis focus options
+    differential_parser.add_argument('--no-network-comparison', action='store_true',
+                                   help='Skip network topology comparison')
+    differential_parser.add_argument('--no-dynamics-comparison', action='store_true',
+                                   help='Skip dynamics (DCCM/PCA) comparison')
+    differential_parser.add_argument('--no-energetics-comparison', action='store_true',
+                                   help='Skip energetics (landscape) comparison')
+    differential_parser.add_argument('--no-kinetics-comparison', action='store_true',
+                                   help='Skip kinetics (MSM) comparison')
+    differential_parser.add_argument('--no-allosteric-comparison', action='store_true',
+                                   help='Skip allosteric communication comparison')
+    
+    # Statistical analysis options
+    differential_parser.add_argument('--statistical-tests', action='store_true', default=True,
+                                   help='Perform statistical significance testing (default: True)')
+    differential_parser.add_argument('--no-statistical-tests', dest='statistical_tests', action='store_false',
+                                   help='Skip statistical significance testing')
+    differential_parser.add_argument('--significance-threshold', type=float, default=0.05,
+                                   help='P-value threshold for significance (default: 0.05)')
+    differential_parser.add_argument('--multiple-comparison-correction', default='fdr_bh',
+                                   choices=['fdr_bh', 'bonferroni', 'none'],
+                                   help='Multiple comparison correction method (default: fdr_bh)')
+    differential_parser.add_argument('--bootstrap-iterations', type=int, default=1000,
+                                   help='Number of bootstrap iterations (default: 1000)')
+    
+    # Visualization options
+    differential_parser.add_argument('--no-plots', action='store_true',
+                                   help='Skip difference plot generation')
+    differential_parser.add_argument('--publication-figures', action='store_true',
+                                   help='Generate high-resolution publication-quality figures')
+    differential_parser.add_argument('--figure-dpi', type=int, default=300,
+                                   help='Figure resolution in DPI (default: 300)')
+    
+    # Output options
+    differential_parser.add_argument('--no-html-report', action='store_true',
+                                   help='Skip HTML report generation')
+    differential_parser.add_argument('--excel-export', action='store_true',
+                                   help='Export results to Excel workbook')
+    
+    # Analysis thresholds
+    differential_parser.add_argument('--correlation-threshold', type=float, default=0.2,
+                                   help='Minimum correlation change to consider significant (default: 0.2)')
+    differential_parser.add_argument('--efficiency-threshold', type=float, default=0.1,
+                                   help='Minimum communication efficiency change (default: 0.1)')
+    differential_parser.add_argument('--energy-threshold', type=float, default=2.0,
+                                   help='Minimum energy change in kT (default: 2.0)')
+    
+    # Standard analysis configuration (inherit from single mode)
+    differential_parser.add_argument('--selection', default='protein and not name H*',
+                                   help='Atom selection string (default: "protein and not name H*")')
+    differential_parser.add_argument('--cutoff', type=float, default=4.5,
+                                   help='Contact distance cutoff in Å (default: 4.5)')
+    differential_parser.add_argument('--threshold', type=float, default=0.2,
+                                   help='Contact frequency threshold (default: 0.2)')
+    differential_parser.add_argument('--community-method', default='leiden',
+                                   choices=['leiden', 'louvain', 'spectral', 'hierarchical'],
+                                   help='Community detection method (default: leiden)')
+    differential_parser.add_argument('--allosteric-sources', nargs='+',
+                                   help='Allosteric source residues (e.g., A_50 B_50)')
+    differential_parser.add_argument('--allosteric-targets', nargs='+',
+                                   help='Allosteric target residues (e.g., A_25 B_25)')
+    differential_parser.add_argument('--msm-lag-time', type=int, default=10,
+                                   help='MSM lag time in frames (default: 10)')
+    differential_parser.add_argument('--msm-clusters', type=int, default=100,
+                                   help='Number of MSM clusters (default: 100)')
+    differential_parser.add_argument('--landscape-temp', type=float, default=310.0,
+                                   help='Temperature for energy landscape in K (default: 310)')
+    differential_parser.add_argument('--landscape-bins', type=int, default=50,
+                                   help='Energy landscape bins (default: 50)')
+    
     # Example configuration generator
     example_parser = subparsers.add_parser(
         'example-config',
@@ -684,6 +879,8 @@ For more information, visit: https://github.com/yourusername/md-compare
         return run_comparison_analysis(args)
     elif args.mode == 'diff':
         return run_differential_analysis(args)
+    elif args.mode == 'differential':
+        return run_comprehensive_differential_analysis(args)
     elif args.mode == 'example-config':
         create_example_config(args.output)
         return 0

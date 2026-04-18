@@ -8,8 +8,151 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Pocket detection and characterization across simulations
 - Machine learning models for conformational change prediction
+
+## [1.5.0] - 2024-04-17 
+
+### Complete Simulation vs Simulation Comparison Framework
+
+### Added
+
+#### **Complete Differential Analysis Framework**
+- **DifferentialAnalyzer**: Core framework for simulation vs simulation comparison
+- **Comprehensive Comparators**: Scientific algorithms for quantitative comparison
+  - AllostericComparator: Full NxN communication efficiency matrix comparison with pathway disruption analysis
+  - DynamicsComparator: DCCM difference matrices with PCA variance comparison and eigenvector similarity
+  - NetworkComparator: Topology changes with centrality ranking shifts and community structure comparison
+  - EnergeticsComparator: Energy landscape differences with conformational state stability analysis
+  - KineticsComparator: MSM timescale changes with transition flux analysis and pathway probability shifts
+
+#### **Statistical Analysis Framework**
+- **Significance Testing**: Rigorous statistical validation for all molecular changes
+  - Permutation tests for network topology differences
+  - Bootstrap confidence intervals for correlation changes
+  - Mann-Whitney U tests for energy distribution differences
+  - Chi-square tests for conformational state population changes
+- **Effect Size Quantification**: Cohen's d, mutual information, and KL divergence metrics
+- **Multiple Comparison Correction**: Benjamini-Hochberg FDR and Bonferroni methods
+
+#### **CLI Integration**
+- **New `differential` command**: Comprehensive simulation comparison
+  ```bash
+  python md_compare_cli.py differential \
+    -t1 sim1.pdb -x1 traj1.xtc -n1 "Condition_A" \
+    -t2 sim2.pdb -x2 traj2.xtc -n2 "Condition_B" \
+    -o results --statistical-tests
+  ```
+- **Advanced Configuration Options**:
+  ```bash
+  --statistical-tests                    # Enable significance testing
+  --significance-threshold 0.01          # P-value threshold
+  --correlation-threshold 0.15           # Minimum correlation change
+  --efficiency-threshold 0.1             # Minimum efficiency change
+  --publication-figures                  # High-resolution figures
+  --excel-export                        # Excel workbook output
+  --bootstrap-iterations 2000            # Statistical robustness
+  --multiple-comparison-correction fdr_bh # FDR correction
+  ```
+
+#### **Professional Output Organization**
+- **Structured 7-Directory Results**: Publication-ready organization
+  ```
+  differential_analysis_results/
+  ├── 01_individual_analyses/              # Complete v1.4.0 analysis for each simulation
+  ├── 02_network_comparisons/              # Network topology differences
+  ├── 03_dynamics_comparisons/             # DCCM & PCA differences  
+  ├── 04_energetics_comparisons/           # Energy landscape differences
+  ├── 05_kinetics_comparisons/             # MSM & timescale differences
+  ├── 06_allosteric_comparisons/           # Communication efficiency differences
+  └── 07_comprehensive_report/             # Executive summary & publication figures
+  ```
+- **Professional Data Exports**: Excel-compatible CSV files for all comparison types
+- **Publication-Quality Visualizations**: 300+ DPI figures with statistical annotations
+- **Interactive HTML Reports**: Comprehensive interpretation with embedded figures
+
+### Enhanced
+
+#### **Visualization Suite**
+- **DCCM Difference Heatmaps**: Correlation change matrices with significance overlays
+- **Communication Efficiency Changes**: Full NxN pathway disruption visualization
+- **Network Topology Comparisons**: Side-by-side topology with highlighted changes
+- **Summary Dashboards**: Overall similarity scores and significance distributions
+
+#### **Command-Line Interface**
+- **Backward Compatibility**: Existing `diff` command maintained for legacy workflows
+- **Enhanced Help Documentation**: Comprehensive option explanations and usage examples
+- **Performance Options**: Configurable analysis components for large systems
+
+### Improved
+
+#### **Statistical Methodology**
+- **Publication-Ready Analysis**: Rigorous significance testing with multiple comparison correction
+- **Effect Size Documentation**: Quantitative magnitude assessment for all molecular changes
+- **Cross-Platform Compatibility**: Robust error handling with informative feedback
+- **Memory Efficiency**: Optimized algorithms for large protein systems
+
+#### **Documentation**
+- **Complete User Guides**: Technical architecture and scientific methodology documentation
+- **Practical Examples**: HIV protease resistance analysis with expected outcomes
+- **Validation Framework**: Comprehensive testing suite for algorithm verification
+
+### Technical Implementation
+
+#### **Files Added**
+- `md_compare_differential.py`: Complete differential analysis framework (88KB)
+- `examples/comprehensive_differential_analysis_example.md`: Practical usage demonstration
+- `test_differential_implementation.py`: Validation test suite
+- `md_compare_demonstration.py`: Interactive workflow demonstrations
+- `DIFFERENTIAL_ANALYSIS_DESIGN.md`: Technical architecture documentation
+- `DIFFERENTIAL_USAGE_GUIDE.md`: Complete user guide with scientific examples
+- `IMPLEMENTATION_SUMMARY.md`: Development achievements and roadmap
+
+#### **Files Modified**
+- `md_compare_cli.py`: Added comprehensive `differential` command with advanced options
+- `examples/README.md`: Updated with v1.5.0 capabilities and learning progression
+
+#### **Quality Assurance**
+- **Comprehensive Testing**: Unit tests for all comparator algorithms
+- **Validation Suite**: Statistical method verification and benchmarking
+- **Integration Testing**: CLI functionality and workflow validation
+- **Performance Benchmarking**: Large system scalability assessment
+
+### Scientific Applications
+
+#### **Drug Resistance Mechanism Analysis**
+- **Quantitative Mutation Effects**: Complete characterization with statistical significance
+- **Cross-Chain Communication**: Multi-chain protein allosteric disruption analysis
+- **Professional Output**: Manuscript-ready results with comprehensive documentation
+
+#### **Drug Discovery Workflows**
+- **Allosteric Modulator Assessment**: Quantitative binding effect analysis with p-values
+- **Structure-Activity Relationships**: Statistical correlation of molecular changes
+- **Multi-Condition Comparison**: Dose-response and selectivity studies
+
+#### **Protein Engineering Applications**
+- **Mutation Effect Prediction**: Statistical confidence in engineering strategies
+- **Stability-Activity Trade-offs**: Quantitative multi-property optimization
+- **Rational Design**: Evidence-based mutation selection with effect sizes
+
+### Dependencies
+
+#### **Core Requirements**
+- Python 3.8+ with scientific computing libraries
+- MDAnalysis for trajectory processing
+- NetworkX for graph analysis
+- NumPy/SciPy for numerical computations
+
+#### **Optional Enhancements**
+- pandas for CSV export functionality
+- matplotlib/seaborn for visualization generation
+- PyEMMA for kinetic analysis integration
+
+#### **System Requirements**
+- Memory: 8-16 GB RAM (32 GB for comprehensive analysis)
+- Storage: 20-50 GB for complete differential analysis results
+- CPU: Multi-core recommended for statistical testing
+
+---
 
 ## [1.4.0] - 2026-04-15
 
