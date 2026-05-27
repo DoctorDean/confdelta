@@ -427,7 +427,7 @@ def create_example_config(output_path: str):
             "threshold": 0.2,
             "timeout_seconds": 300,
             "segments": 5,
-            "preprocess": True,
+            "preprocess": true,
             "align_selection": "name CA",
             "center_selection": "protein"
         }
@@ -856,6 +856,76 @@ For more information, visit: https://github.com/yourusername/md-compare
                                    help='Temperature for energy landscape in K (default: 310)')
     differential_parser.add_argument('--landscape-bins', type=int, default=50,
                                    help='Energy landscape bins (default: 50)')
+    
+    # Missing attributes needed by create_analysis_config_from_args
+    differential_parser.add_argument('--interaction-types', nargs='+',
+                                   choices=['distance', 'hbond', 'salt_bridge'],
+                                   default=['distance'],
+                                   help='Types of interactions to analyze (default: distance)')
+    differential_parser.add_argument('--segments', type=int, default=5,
+                                   help='Number of trajectory segments (default: 5)')
+    differential_parser.add_argument('--timeout', type=int, default=300,
+                                   help='Timeout for expensive computations (default: 300s)')
+    differential_parser.add_argument('--no-preprocess', action='store_true',
+                                   help='Disable MD preprocessing')
+    differential_parser.add_argument('--align-selection', default='name CA',
+                                   help='Selection for structural alignment (default: "name CA")')
+    differential_parser.add_argument('--center-selection', default='protein',
+                                   help='Selection for centering (default: "protein")')
+    differential_parser.add_argument('--compute-dccm', action='store_true', default=True,
+                                   help='Compute Dynamic Cross-Correlation Matrix (default: True)')
+    differential_parser.add_argument('--no-dccm', dest='compute_dccm', action='store_false',
+                                   help='Skip DCCM computation')
+    differential_parser.add_argument('--compute-pca', action='store_true', default=True,
+                                   help='Compute Principal Component Analysis (default: True)')
+    differential_parser.add_argument('--no-pca', dest='compute_pca', action='store_false',
+                                   help='Skip PCA computation')
+    differential_parser.add_argument('--pca-components', type=int, default=10,
+                                   help='Number of principal components (default: 10)')
+    differential_parser.add_argument('--dccm-selection', default='name CA',
+                                   help='Atom selection for dynamic analysis (default: "name CA")')
+    differential_parser.add_argument('--compute-landscape', action='store_true', default=True,
+                                   help='Compute energy landscape (default: True)')
+    differential_parser.add_argument('--no-landscape', dest='compute_landscape', action='store_false',
+                                   help='Skip energy landscape computation')
+    differential_parser.add_argument('--landscape-sigma', type=float, default=1.0,
+                                   help='Gaussian smoothing sigma for landscape (default: 1.0)')
+    differential_parser.add_argument('--compute-communities', action='store_true', default=True,
+                                   help='Compute community detection (default: True)')
+    differential_parser.add_argument('--no-communities', dest='compute_communities', action='store_false',
+                                   help='Skip community detection')
+    differential_parser.add_argument('--compute-paths', action='store_true', default=True,
+                                   help='Compute path analysis (default: True)')
+    differential_parser.add_argument('--no-paths', dest='compute_paths', action='store_false',
+                                   help='Skip path analysis')
+    differential_parser.add_argument('--allosteric-analysis', action='store_true', default=True,
+                                   help='Perform allosteric analysis (default: True)')
+    differential_parser.add_argument('--no-allosteric', dest='allosteric_analysis', action='store_false',
+                                   help='Skip allosteric analysis')
+    differential_parser.add_argument('--compute-msm', action='store_true', default=True,
+                                   help='Compute Markov State Model (default: True)')
+    differential_parser.add_argument('--no-msm', dest='compute_msm', action='store_false',
+                                   help='Skip MSM computation')
+    differential_parser.add_argument('--msm-stride', type=int, default=1,
+                                   help='MSM stride for coordinate extraction (default: 1)')
+    differential_parser.add_argument('--msm-features', default='distances',
+                                   choices=['distances', 'coordinates', 'angles', 'dihedrals'],
+                                   help='MSM feature type (default: distances)')
+    differential_parser.add_argument('--msm-clustering', default='kmeans',
+                                   choices=['kmeans', 'minibatch_kmeans', 'regular_space'],
+                                   help='MSM clustering method (default: kmeans)')
+    differential_parser.add_argument('--compute-kinetics', action='store_true', default=True,
+                                   help='Compute kinetic analysis (default: True)')
+    differential_parser.add_argument('--no-kinetics', dest='compute_kinetics', action='store_false',
+                                   help='Skip kinetic analysis')
+    differential_parser.add_argument('--kinetic-timescales', type=int, default=5,
+                                   help='Number of kinetic timescales (default: 5)')
+    differential_parser.add_argument('--compute-metastable-states', action='store_true', default=True,
+                                   help='Compute metastable states (default: True)')
+    differential_parser.add_argument('--no-metastable', dest='compute_metastable_states', action='store_false',
+                                   help='Skip metastable state analysis')
+    differential_parser.add_argument('--metastable-states', type=int, default=5,
+                                   help='Number of metastable states (default: 5)')
     
     # Example configuration generator
     example_parser = subparsers.add_parser(

@@ -337,7 +337,7 @@ class DifferentialAnalyzer:
         """Run complete individual analyses on both simulations"""
         
         # Import the main analysis class  
-        from md_compare_core import MDCompare
+        from md_compare_core import MDCompare, SimulationConfig
         
         if analysis_config is None:
             analysis_config = AnalysisConfig()
@@ -346,16 +346,33 @@ class DifferentialAnalyzer:
         sim1_output = self.subdirs['individual'] / f"{sim1_name}_results"
         sim2_output = self.subdirs['individual'] / f"{sim2_name}_results"
         
+        # Create simulation configurations
+        sim1_config = SimulationConfig(
+            name=sim1_name,
+            topology=sim1_topology,
+            trajectory=sim1_trajectory,
+            selection="protein and not name H*",
+            description=f"Simulation 1 for differential analysis"
+        )
+        
+        sim2_config = SimulationConfig(
+            name=sim2_name,
+            topology=sim2_topology,
+            trajectory=sim2_trajectory,
+            selection="protein and not name H*", 
+            description=f"Simulation 2 for differential analysis"
+        )
+        
         # Analyze simulation 1
         print(f"  Analyzing {sim1_name}...")
         md_compare_1 = MDCompare(analysis_config, str(sim1_output))
-        md_compare_1.add_simulation(sim1_topology, sim1_trajectory, sim1_name)
+        md_compare_1.add_simulation(sim1_config)
         sim1_results = md_compare_1.run_analysis([sim1_name])[sim1_name]
         
         # Analyze simulation 2  
         print(f"  Analyzing {sim2_name}...")
         md_compare_2 = MDCompare(analysis_config, str(sim2_output))
-        md_compare_2.add_simulation(sim2_topology, sim2_trajectory, sim2_name)
+        md_compare_2.add_simulation(sim2_config)
         sim2_results = md_compare_2.run_analysis([sim2_name])[sim2_name]
         
         return sim1_results, sim2_results

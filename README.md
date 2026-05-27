@@ -1,4 +1,4 @@
-# MD-Compare v1.4.0: Comprehensive Protein Dynamics Analysis Platform
+# MD-Compare v1.5.0: Comprehensive Protein Dynamics Analysis Platform
 
 ![Python](https://img.shields.io/badge/python-3.10-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
