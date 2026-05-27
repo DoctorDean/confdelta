@@ -1,0 +1,125 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md-compare"
+version = "1.5.0"
+description = "Comprehensive protein dynamics analysis: network analysis, conformational dynamics, energy landscapes, kinetic modeling, and differential comparison of MD simulations."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Dean Sherry" },
+]
+keywords = [
+    "molecular dynamics",
+    "network analysis",
+    "protein dynamics",
+    "markov state models",
+    "allosteric networks",
+    "structural biology",
+    "drug discovery",
+    "bioinformatics",
+    "computational biology",
+    "kinetic modeling",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "MDAnalysis>=2.4.0",
+    "networkx>=2.8",
+    "numpy>=1.21.0,<2.0",
+    "scipy>=1.7.0",
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.0",
+    "pandas>=1.3.0",
+    "scikit-learn>=1.0.0",
+    "tqdm>=4.62.0",
+]
+
+[project.optional-dependencies]
+# Kinetic modeling (Markov State Models). PyEMMA is the backend the MSM
+# code is written against and is the recommended choice. deeptime is its
+# successor and is provided as a forward-looking alternative.
+msm = ["pyemma>=2.5.11"]
+deeptime = ["deeptime>=0.4.4"]
+# Leiden community detection.
+leiden = ["python-igraph>=0.10.0", "leidenalg>=0.9.0"]
+# Interactive / extended visualization.
+viz = ["plotly>=5.0.0", "ipywidgets>=7.6.0"]
+# Experimental ML resistance classifier.
+ml = ["scikit-learn>=1.0.0", "joblib>=1.1.0"]
+# Development tooling.
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+docs = ["sphinx>=5.0.0", "sphinx-rtd-theme>=1.2.0", "myst-parser>=1.0.0"]
+all = [
+    "pyemma>=2.5.11",
+    "python-igraph>=0.10.0",
+    "leidenalg>=0.9.0",
+    "plotly>=5.0.0",
+    "ipywidgets>=7.6.0",
+    "joblib>=1.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DoctorDean/MD-Compare"
+Repository = "https://github.com/DoctorDean/MD-Compare"
+Issues = "https://github.com/DoctorDean/MD-Compare/issues"
+Changelog = "https://github.com/DoctorDean/MD-Compare/blob/master/CHANGELOG.md"
+
+[project.scripts]
+md-compare = "mdcompare.cli:main"
+mdcompare = "mdcompare.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "requires_msm: tests needing an optional MSM backend (deeptime/pyemma)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501", "B008"]
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.coverage.run]
+source = ["mdcompare"]
+branch = true
