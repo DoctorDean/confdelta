@@ -7,10 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Installable package layout: all modules now live under `src/mdcompare/`,
+  enabling `pip install` and a stable import path (`import mdcompare`).
+- `pyproject.toml` (PEP 621) replacing `setup.py`, with optional-dependency
+  extras: `msm`, `deeptime`, `leiden`, `viz`, `ml`, `dev`, `docs`, `all`.
+- `python -m mdcompare` entry point alongside the `md-compare` console script.
+- Real pytest suite (58 tests) with synthetic in-memory trajectory fixtures
+  requiring no external data package; covers core, utils, differential
+  analysis and the experimental resistance classifier.
+- GitHub Actions CI: test matrix (Python 3.8-3.12), lint (ruff + black) and
+  a build job validating the sdist/wheel with `twine check`.
+- `mdcompare.experimental` subpackage with a hardened resistance classifier
+  (`prepare_ml_features`, `train_resistance_classifier`, `predict_resistance`,
+  optional GNN path), promoted from the former loose `in-progress/` script.
+
+### Fixed
+- `MDSimulation.load()` no longer crashes on topologies without `chainID`
+  information (e.g. PSF/GRO files): a new fallback resolves chain labels from
+  `chainIDs`, then `segids`, then `segindices`, then a single chain.
+- Contact-frequency double counting: `_compute_distance_contacts` collapsed
+  to unique residue pairs per frame, so contact-map values are now true
+  frequencies in `[0, 1]`.
+- Stale `md_compare_core` import inside `utils.load_analysis_config`.
+
+### Changed
+- Heavy optional dependencies (PyEMMA) are detected via `importlib` and
+  imported lazily; import-time `print()` spam replaced with a `mdcompare`
+  logger.
+- Version unified to 1.5.0 across `__init__.py` and packaging metadata.
+
 ### Planned
 - Machine learning models for conformational change prediction
+- deeptime as an alternative MSM backend (currently detection-only)
 
-## [1.5.0] - 2024-04-17 
+## [1.5.0] - 2026-04-17
 
 ### Complete Simulation vs Simulation Comparison Framework
 
@@ -37,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### **CLI Integration**
 - **New `differential` command**: Comprehensive simulation comparison
   ```bash
-  python md_compare_cli.py differential \
+  md-compare differential \
     -t1 sim1.pdb -x1 traj1.xtc -n1 "Condition_A" \
     -t2 sim2.pdb -x2 traj2.xtc -n2 "Condition_B" \
     -o results --statistical-tests
@@ -99,13 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Implementation
 
 #### **Files Added**
-- `md_compare_differential.py`: Complete differential analysis framework (88KB)
-- `examples/comprehensive_differential_analysis_example.md`: Practical usage demonstration
-- `test_differential_implementation.py`: Validation test suite
-- `md_compare_demonstration.py`: Interactive workflow demonstrations
-- `DIFFERENTIAL_ANALYSIS_DESIGN.md`: Technical architecture documentation
-- `DIFFERENTIAL_USAGE_GUIDE.md`: Complete user guide with scientific examples
-- `IMPLEMENTATION_SUMMARY.md`: Development achievements and roadmap
+- `md_compare_differential.py`: Complete differential analysis framework
+- `tests/test_differential_implementation.py`: Validation test suite
 
 #### **Files Modified**
 - `md_compare_cli.py`: Added comprehensive `differential` command with advanced options

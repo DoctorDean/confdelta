@@ -259,7 +259,7 @@ After completing these examples, you will be able to:
 ### **Quick Start for Comprehensive Analysis**
 ```bash
 # Basic comprehensive differential analysis
-python md_compare_cli.py differential \
+md-compare differential \
   -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a.xtc -n2 "V82A_Mutant" \
   -o results

@@ -1,6 +1,12 @@
 # MD-Compare Installation Guide
 
-This guide provides detailed instructions for installing MD-Compare v1.4.0 and all its dependencies across different platforms and environments.
+This guide provides detailed instructions for installing MD-Compare v1.5.0 and all its dependencies across different platforms and environments.
+
+> **Note:** MD-Compare is now an installable package. The recommended install
+> is `pip install .` (or `pip install ".[all]"` for optional features) from a
+> clone of the repository — this puts the `md-compare` command on your PATH.
+> The `requirements.txt` route below still works but only installs the
+> dependencies, not the package itself.
 
 ## 🎯 **Quick Installation**
 
@@ -297,13 +303,13 @@ pip install pyemma
 # Problem: Out of memory during analysis
 # Solutions:
 # 1. Use stride to reduce data
-python md_compare_cli.py single ... --msm-stride 5
+md-compare single ... --msm-stride 5
 
 # 2. Reduce cluster count
-python md_compare_cli.py single ... --msm-clusters 50
+md-compare single ... --msm-clusters 50
 
 # 3. Focus analysis
-python md_compare_cli.py single ... --contact-selection "name CA"
+md-compare single ... --contact-selection "name CA"
 ```
 
 #### **Performance Issues**
@@ -311,13 +317,13 @@ python md_compare_cli.py single ... --contact-selection "name CA"
 # Problem: Analysis too slow
 # Solutions:
 # 1. Skip expensive analysis
-python md_compare_cli.py single ... --no-pca --no-landscape
+md-compare single ... --no-pca --no-landscape
 
 # 2. Use faster algorithms
-python md_compare_cli.py single ... --community-method louvain
+md-compare single ... --community-method louvain
 
 # 3. Reduce network size
-python md_compare_cli.py single ... --cutoff-distance 4.0
+md-compare single ... --cutoff-distance 4.0
 ```
 
 ## 🚀 **Post-Installation Setup**
@@ -335,7 +341,7 @@ mkdir -p $MDCOMPARE_DATA_DIR $MDCOMPARE_RESULTS_DIR
 ### **Test Analysis**
 ```bash
 # Run test analysis (requires test data)
-python md_compare_cli.py single \
+md-compare single \
   -t example_data/protein.pdb \
   -x example_data/trajectory.xtc \
   -n test_analysis \

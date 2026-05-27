@@ -1,8 +1,8 @@
 # MD-Compare v1.5.0: Comprehensive Protein Dynamics Analysis Platform
 
-![Python](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Version](https://img.shields.io/badge/version-1.4.0-orange.svg)
+![Version](https://img.shields.io/badge/version-1.5.0-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
 **MD-Compare** is a comprehensive toolkit for analyzing molecular dynamics simulations with advanced network analysis, conformational dynamics, and kinetic modeling capabilities. Originally designed for HIV protease research, it provides publication-ready insights into protein dynamics, allosteric mechanisms, and drug resistance pathways.
@@ -35,34 +35,46 @@
 
 ### **Installation**
 
-#### **Option 1: Conda (Recommended)**
+MD-Compare is an installable Python package. Once published it will be
+available from PyPI; until then, install from a local clone.
+
+#### **Option 1: pip (Recommended)**
 ```bash
-# Create environment with Python 3.10 for best compatibility
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
+# Core install
+pip install .
+
+# Or with optional features:
+pip install ".[msm]"               # + PyEMMA (Markov State Models)
+pip install ".[leiden]"            # + Leiden community detection
+pip install ".[all]"               # + all optional features
+pip install ".[dev]"               # + test/lint/build tooling
+```
+
+#### **Option 2: Conda (for the heavier optional dependencies)**
+```bash
+# Create an environment (Python 3.8-3.12 supported)
 conda create -n mdcompare python=3.10
 conda activate mdcompare
 
-# Install PyEMMA and other packages from conda-forge
+# PyEMMA / igraph / leidenalg install most reliably from conda-forge
 conda install -c conda-forge pyemma python-igraph leidenalg mdanalysis
 
-# Install remaining dependencies
-pip install networkx scipy pandas matplotlib seaborn scikit-learn
+# Then install MD-Compare itself
+pip install .
 ```
 
-#### **Option 2: pip Installation**
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
+After installation the `md-compare` command is on your PATH; you can also
+run the tool as `python -m mdcompare`.
 
 ### **Basic Usage**
 
 #### **Complete Analysis (Network + Dynamics + Kinetics)**
 ```bash
-python md_compare_cli.py single \
+md-compare single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n comprehensive_analysis \
@@ -77,7 +89,7 @@ python md_compare_cli.py single \
 
 #### **Network Analysis Only**
 ```bash
-python md_compare_cli.py single \
+md-compare single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n network_analysis \
@@ -87,7 +99,7 @@ python md_compare_cli.py single \
 
 #### **Kinetic Modeling Focus**
 ```bash
-python md_compare_cli.py single \
+md-compare single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n kinetic_analysis \
@@ -408,7 +420,7 @@ pip install pyemma
 ### **Memory Issues with Large Systems**
 ```bash
 # Reduce memory usage
-python md_compare_cli.py single \
+md-compare single \
   -t large_protein.pdb \
   -x large_trajectory.xtc \
   -n memory_efficient \
@@ -423,7 +435,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ##  **Version History**
 
-### **v1.4.0 (Current)**
+### **v1.5.0 (Current)**
+- **Differential Analysis Framework**: Full simulation-vs-simulation comparison
+- **Installable Package**: `src/` layout, `pyproject.toml`, console scripts
+- **Statistical Comparators**: Network, dynamics, energetics, kinetics, allosteric
+
+### **v1.4.0**
 - **PyEMMA Integration**: Complete MSM analysis framework
 - **Enhanced Visualizations**: 8-panel MSM dashboard
 - **Excel Export**: CSV files for transition matrices and kinetic data
@@ -441,4 +458,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**MD-Compare v1.4.0** - *Advancing Protein Dynamics Analysis Through Computational Innovation* 
+**MD-Compare v1.5.0** - *Advancing Protein Dynamics Analysis Through Computational Innovation* 
