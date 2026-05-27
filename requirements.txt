@@ -1,125 +1,26 @@
-# MD-Compare v1.4.0: Comprehensive Protein Dynamics Analysis Platform
-# Install with: pip install -r requirements.txt
+# MD-Compare core runtime dependencies.
+#
+# These mirror the [project.dependencies] table in pyproject.toml and are
+# kept for convenience (`pip install -r requirements.txt`). For a proper
+# install, prefer:  pip install .            (core)
+#                   pip install .[all]       (core + optional features)
+#                   pip install .[msm]       (core + Markov State Models)
 
-# =====================================================
-# CORE DEPENDENCIES (Required for basic functionality)
-# =====================================================
-
-# Molecular dynamics analysis
 MDAnalysis>=2.4.0
-MDAnalysisTests>=2.4.0
-
-# Network analysis and graph theory
 networkx>=2.8
-
-# Numerical computing (PyEMMA compatibility)
 numpy>=1.21.0,<2.0
 scipy>=1.7.0
-
-# Visualization and plotting
 matplotlib>=3.5.0
 seaborn>=0.11.0
-
-# Data manipulation and analysis
 pandas>=1.3.0
 scikit-learn>=1.0.0
-
-# Progress monitoring
 tqdm>=4.62.0
 
-# =====================================================
-# ADVANCED FEATURES (Optional but recommended)
-# =====================================================
-
-# Advanced community detection algorithms
-python-igraph>=0.10.0
-leidenalg>=0.9.0
-
-# Markov State Model analysis (kinetic modeling)
-pyemma>=2.5.11
-
-# Interactive analysis
-jupyter>=1.0.0
-ipywidgets>=7.6.0
-
-# Enhanced visualizations
-plotly>=5.0.0
-
-# =====================================================
-# ALTERNATIVE MSM LIBRARIES (Optional)
-# =====================================================
-
-# Uncomment for alternative MSM implementations:
-# deeptime>=0.4.0         # PyEMMA successor (modern alternative)
-# msmbuilder>=3.8.0       # Alternative MSM library
-
-# =====================================================
-# DEVELOPMENT DEPENDENCIES (Optional)
-# =====================================================
-
-# Testing framework
-# pytest>=6.0.0
-# pytest-cov>=3.0.0
-
-# Code quality and formatting
-# black>=22.0.0
-# flake8>=4.0.0
-# mypy>=0.991
-
-# Documentation generation
-# sphinx>=4.0.0
-# sphinx-rtd-theme>=1.0.0
-
-# Performance monitoring
-# memory-profiler>=0.60.0
-
-# =====================================================
-# SPECIALIZED DEPENDENCIES (Optional)
-# =====================================================
-
-# Network visualization (requires system graphviz)
-# pygraphviz>=1.7
-
-# Additional molecular formats
-# openmm>=7.7.0          # OpenMM trajectory support
-# parmed>=3.4.0          # AMBER parameter files
-# rdkit>=2022.03.0       # Chemical informatics
-
-# GPU acceleration (if available)
-# cupy>=10.0.0           # GPU-accelerated NumPy
-# tensorflow>=2.8.0      # Machine learning (future features)
-
-# =====================================================
-# INSTALLATION NOTES
-# =====================================================
-
-# System Requirements:
-# - Python >= 3.8 (Python 3.10 recommended for PyEMMA)
-# - 8GB+ RAM for large protein systems
-# - Optional: GPU for enhanced performance
-
-# Recommended Installation (Conda):
-# conda create -n mdcompare python=3.10
-# conda activate mdcompare
-# conda install -c conda-forge pyemma python-igraph leidenalg
-# pip install -r requirements.txt
-
-# Alternative Installation (pip only):
-# python -m venv .venv
-# source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-# pip install -r requirements.txt
-
-# PyEMMA Installation Issues:
-# If PyEMMA installation fails, try:
-# conda install -c conda-forge pyemma
-# OR pip install --only-binary=all pyemma
-# OR use Python 3.8-3.10 for better compatibility
-
-# For GPU support:
-# pip install cupy-cuda11x  # Replace with your CUDA version
-
-# Troubleshooting:
-# - Windows: May require Visual C++ Build Tools for compilation
-# - macOS: May require Xcode command line tools
-# - Linux: Install build-essential and python3-dev packages
-
+# ---------------------------------------------------------------------------
+# Optional features (install via extras instead of uncommenting here):
+#   pip install .[msm]      -> pyemma            (Markov State Models)
+#   pip install .[leiden]   -> python-igraph, leidenalg  (Leiden communities)
+#   pip install .[viz]      -> plotly, ipywidgets
+#   pip install .[ml]       -> joblib            (resistance classifier)
+#   pip install .[dev]      -> pytest, ruff, black, mypy, build, twine
+# ---------------------------------------------------------------------------
