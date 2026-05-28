@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Pluggable MSM backend (`mdcompare.msm_backends`) supporting both PyEMMA
+  and deeptime, selectable via `AnalysisConfig.msm_backend`
+  (`auto`/`pyemma`/`deeptime`). A deeptime adapter exposes the PyEMMA-style
+  model surface (`nstates`, `transition_matrix`, `eigenvalues()`,
+  `timescales()`, `mfpt()`, `pcca()`), so deeptime works on Python 3.11+
+  where PyEMMA is hard to install.
 - Installable package layout: all modules now live under `src/mdcompare/`,
   enabling `pip install` and a stable import path (`import mdcompare`).
 - `pyproject.toml` (PEP 621) replacing `setup.py`, with optional-dependency

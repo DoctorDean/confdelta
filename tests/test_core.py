@@ -17,6 +17,7 @@ from mdcompare.core import (
 # Configuration dataclasses
 # ---------------------------------------------------------------------------
 
+
 class TestConfigs:
     def test_analysis_config_defaults(self):
         cfg = AnalysisConfig()
@@ -45,6 +46,7 @@ class TestConfigs:
 # ---------------------------------------------------------------------------
 # Chain-label resolution (regression tests for the chainID load bug)
 # ---------------------------------------------------------------------------
+
 
 class TestChainResolution:
     def test_chainids_are_used_when_present(self, synthetic_universe):
@@ -83,6 +85,7 @@ class TestChainResolution:
 # Simulation properties
 # ---------------------------------------------------------------------------
 
+
 class TestMDSimulation:
     def test_basic_properties(self, synthetic_simulation):
         sim = synthetic_simulation
@@ -91,7 +94,7 @@ class TestMDSimulation:
         assert sim.n_frames == 25
 
     def test_chain_info_structure(self, synthetic_simulation):
-        for chain, info in synthetic_simulation.chain_info.items():
+        for _chain, info in synthetic_simulation.chain_info.items():
             assert info["n_residues"] > 0
             assert info["atom_count"] > 0
             assert len(info["residue_range"]) == 2
@@ -104,6 +107,7 @@ class TestMDSimulation:
 # ---------------------------------------------------------------------------
 # Network analysis pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestNetworkAnalyzer:
     def test_contact_maps_shape(self, synthetic_simulation):
@@ -140,3 +144,58 @@ class TestNetworkAnalyzer:
         # Must not raise — returns inf for disconnected graphs.
         result = analyzer._safe_diameter(g)
         assert result == float("inf") or result >= 0
+
+
+# ---------------------------------------------------------------------------
+# MSM backend integration (delegates to mdcompare.msm_backends)
+# ---------------------------------------------------------------------------
+
+
+class TestMSMIntegration:
+    @staticmethod
+    def _has_backend():
+        import importlib.util
+
+        return (
+            importlib.util.find_spec("deeptime") is not None
+            or importlib.util.find_spec("pyemma") is not None
+        )
+
+    def _features(self, seed=0):
+        rng = np.random.default_rng(seed)
+        return rng.normal(0, 1, size=(600, 4))
+
+    def test_clustering_delegates_to_backend(self):
+        if not self._has_backend():
+            import pytest
+
+            pytest.skip("no MSM backend installed")
+        config = AnalysisConfig(msm_n_clusters=8, msm_clustering_method="kmeans")
+        analyzer = NetworkAnalyzer(config)
+        clustering = analyzer._perform_msm_clustering(self._features())
+        assert hasattr(clustering, "dtrajs")
+        assert hasattr(clustering, "clustercenters")
+        assert len(clustering.dtrajs) == 1
+
+    def test_build_msm_model_returns_triplet(self):
+        if not self._has_backend():
+            import pytest
+
+            pytest.skip("no MSM backend installed")
+        config = AnalysisConfig(msm_n_clusters=8, msm_lag_time=3, kinetic_timescales_count=4)
+        analyzer = NetworkAnalyzer(config)
+        clustering = analyzer._perform_msm_clustering(self._features(1))
+        model, lag_times, timescales = analyzer._build_msm_model(clustering.dtrajs[0])
+        assert hasattr(model, "transition_matrix")
+        assert hasattr(model, "stationary_distribution")
+        assert len(lag_times) >= 1
+
+    def test_pairwise_distance_features_are_subsampled(self):
+        """Large atom counts must be capped to keep the feature dim tractable."""
+        config = AnalysisConfig(msm_max_distance_atoms=50)
+        analyzer = NetworkAnalyzer(config)
+        coords = np.random.default_rng(0).normal(0, 1, size=(20, 400, 3))
+        features = analyzer._compute_pairwise_distances(coords)
+        # 50 atoms -> 50*49/2 = 1225 pairwise distances, not 400*399/2.
+        assert features.shape[0] == 20
+        assert features.shape[1] == 50 * 49 // 2
