@@ -14,7 +14,6 @@ from contextlib import contextmanager
 import numpy as np
 
 try:
-    import MDAnalysis as mda
     from MDAnalysis.analysis import align
 except ImportError:
     pass
@@ -23,24 +22,25 @@ except ImportError:
 # TIMEOUT UTILITIES
 # =====================================================
 
+
 @contextmanager
 def timeout_handler(seconds):
     """
     Context manager for timing out long-running operations
     Cross-platform compatible (Windows/Unix)
-    
+
     Parameters:
     -----------
     seconds : int
         Timeout duration in seconds
-        
+
     Raises:
     -------
     TimeoutError : If operation exceeds timeout (Unix only)
     """
     import platform
 
-    if platform.system() == 'Windows':
+    if platform.system() == "Windows":
         # Windows doesn't support SIGALRM, so we skip timeout functionality
         # Operations will run to completion
         print("Note: Timeout functionality not available on Windows, running without timeout")
@@ -68,6 +68,7 @@ def timeout_handler(seconds):
 # MD PREPROCESSING
 # =====================================================
 
+
 class MDPreprocessor:
     """
     Handle MD trajectory preprocessing for network analysis
@@ -76,7 +77,7 @@ class MDPreprocessor:
     def __init__(self, universe, align_selection="name CA", center_selection="protein"):
         """
         Initialize MD preprocessor
-        
+
         Parameters:
         -----------
         universe : MDAnalysis.Universe
@@ -110,7 +111,7 @@ class MDPreprocessor:
     def setup_reference(self, frame=0):
         """
         Set up reference structure for alignment
-        
+
         Parameters:
         -----------
         frame : int
@@ -137,27 +138,27 @@ class MDPreprocessor:
 
         try:
             rotation_matrix, rmsd = align.rotation_matrix(
-                current_positions,
-                self.reference_coordinates
+                current_positions, self.reference_coordinates
             )
             self.universe.atoms.rotate(rotation_matrix)
         except Exception as e:
-            warnings.warn(f"Alignment failed: {e}")
+            warnings.warn(f"Alignment failed: {e}", stacklevel=2)
 
 
 # =====================================================
 # NETWORK ANALYSIS UTILITIES
 # =====================================================
 
+
 def calculate_network_robustness(network):
     """
     Calculate network robustness metrics
-    
+
     Parameters:
     -----------
     network : networkx.Graph
         The network to analyze
-        
+
     Returns:
     --------
     Dict : Robustness metrics
@@ -165,29 +166,31 @@ def calculate_network_robustness(network):
     import networkx as nx
 
     if network.number_of_nodes() == 0:
-        return {'error': 'Empty network'}
+        return {"error": "Empty network"}
 
     robustness = {}
 
     # Basic connectivity
-    robustness['is_connected'] = nx.is_connected(network)
-    robustness['n_components'] = nx.number_connected_components(network)
+    robustness["is_connected"] = nx.is_connected(network)
+    robustness["n_components"] = nx.number_connected_components(network)
 
     if nx.is_connected(network):
         # Node connectivity
-        robustness['node_connectivity'] = nx.node_connectivity(network)
-        robustness['edge_connectivity'] = nx.edge_connectivity(network)
+        robustness["node_connectivity"] = nx.node_connectivity(network)
+        robustness["edge_connectivity"] = nx.edge_connectivity(network)
     else:
-        robustness['node_connectivity'] = 0
-        robustness['edge_connectivity'] = 0
+        robustness["node_connectivity"] = 0
+        robustness["edge_connectivity"] = 0
 
     # Largest component size
     if network.number_of_nodes() > 0:
         components = list(nx.connected_components(network))
         largest_component_size = max(len(c) for c in components) if components else 0
-        robustness['largest_component_fraction'] = largest_component_size / network.number_of_nodes()
+        robustness["largest_component_fraction"] = (
+            largest_component_size / network.number_of_nodes()
+        )
     else:
-        robustness['largest_component_fraction'] = 0
+        robustness["largest_component_fraction"] = 0
 
     return robustness
 
@@ -195,12 +198,12 @@ def calculate_network_robustness(network):
 def analyze_network_assortativity(network):
     """
     Analyze network assortativity (degree correlation)
-    
+
     Parameters:
     -----------
     network : networkx.Graph
         The network to analyze
-        
+
     Returns:
     --------
     Dict : Assortativity metrics
@@ -211,21 +214,21 @@ def analyze_network_assortativity(network):
 
     try:
         # Degree assortativity
-        assortativity['degree_assortativity'] = nx.degree_assortativity_coefficient(network)
-    except:
-        assortativity['degree_assortativity'] = None
+        assortativity["degree_assortativity"] = nx.degree_assortativity_coefficient(network)
+    except Exception:
+        assortativity["degree_assortativity"] = None
 
     # If nodes have chain information
     if network.number_of_nodes() > 0:
         node = list(network.nodes())[0]
-        if 'chain' in network.nodes[node]:
+        if "chain" in network.nodes[node]:
             try:
                 # Chain assortativity (tendency for same-chain residues to connect)
-                assortativity['chain_assortativity'] = nx.attribute_assortativity_coefficient(
-                    network, 'chain'
+                assortativity["chain_assortativity"] = nx.attribute_assortativity_coefficient(
+                    network, "chain"
                 )
-            except:
-                assortativity['chain_assortativity'] = None
+            except Exception:
+                assortativity["chain_assortativity"] = None
 
     return assortativity
 
@@ -234,17 +237,18 @@ def analyze_network_assortativity(network):
 # CONTACT ANALYSIS UTILITIES
 # =====================================================
 
-def analyze_contact_persistence(contact_matrix, percentiles=[25, 50, 75, 90, 95]):
+
+def analyze_contact_persistence(contact_matrix, percentiles=(25, 50, 75, 90, 95)):
     """
     Analyze the persistence distribution of contacts
-    
+
     Parameters:
     -----------
     contact_matrix : np.ndarray
         Contact frequency matrix
     percentiles : List[int]
         Percentiles to calculate
-        
+
     Returns:
     --------
     Dict : Contact persistence statistics
@@ -257,21 +261,21 @@ def analyze_contact_persistence(contact_matrix, percentiles=[25, 50, 75, 90, 95]
     nonzero_contacts = contact_frequencies[contact_frequencies > 0]
 
     if len(nonzero_contacts) == 0:
-        return {'error': 'No contacts found'}
+        return {"error": "No contacts found"}
 
     stats = {
-        'total_possible_contacts': len(contact_frequencies),
-        'actual_contacts': len(nonzero_contacts),
-        'contact_fraction': len(nonzero_contacts) / len(contact_frequencies),
-        'mean_frequency': np.mean(nonzero_contacts),
-        'std_frequency': np.std(nonzero_contacts),
-        'min_frequency': np.min(nonzero_contacts),
-        'max_frequency': np.max(nonzero_contacts)
+        "total_possible_contacts": len(contact_frequencies),
+        "actual_contacts": len(nonzero_contacts),
+        "contact_fraction": len(nonzero_contacts) / len(contact_frequencies),
+        "mean_frequency": np.mean(nonzero_contacts),
+        "std_frequency": np.std(nonzero_contacts),
+        "min_frequency": np.min(nonzero_contacts),
+        "max_frequency": np.max(nonzero_contacts),
     }
 
     # Calculate percentiles
     for p in percentiles:
-        stats[f'percentile_{p}'] = np.percentile(nonzero_contacts, p)
+        stats[f"percentile_{p}"] = np.percentile(nonzero_contacts, p)
 
     return stats
 
@@ -279,7 +283,7 @@ def analyze_contact_persistence(contact_matrix, percentiles=[25, 50, 75, 90, 95]
 def find_highly_persistent_contacts(contact_matrix, residue_keys, threshold=0.8):
     """
     Find highly persistent contacts in the network
-    
+
     Parameters:
     -----------
     contact_matrix : np.ndarray
@@ -288,7 +292,7 @@ def find_highly_persistent_contacts(contact_matrix, residue_keys, threshold=0.8)
         Residue identifiers
     threshold : float
         Minimum frequency for "highly persistent" contacts
-        
+
     Returns:
     --------
     List[Dict] : List of highly persistent contact pairs
@@ -302,17 +306,20 @@ def find_highly_persistent_contacts(contact_matrix, residue_keys, threshold=0.8)
             frequency = contact_matrix[i, j]
 
             if frequency >= threshold:
-                persistent_contacts.append({
-                    'residue_1': residue_keys[i],
-                    'residue_2': residue_keys[j],
-                    'frequency': frequency,
-                    'chain_1': residue_keys[i].split('_')[0],
-                    'chain_2': residue_keys[j].split('_')[0],
-                    'is_interchain': residue_keys[i].split('_')[0] != residue_keys[j].split('_')[0]
-                })
+                persistent_contacts.append(
+                    {
+                        "residue_1": residue_keys[i],
+                        "residue_2": residue_keys[j],
+                        "frequency": frequency,
+                        "chain_1": residue_keys[i].split("_")[0],
+                        "chain_2": residue_keys[j].split("_")[0],
+                        "is_interchain": residue_keys[i].split("_")[0]
+                        != residue_keys[j].split("_")[0],
+                    }
+                )
 
     # Sort by frequency
-    persistent_contacts.sort(key=lambda x: x['frequency'], reverse=True)
+    persistent_contacts.sort(key=lambda x: x["frequency"], reverse=True)
 
     return persistent_contacts
 
@@ -321,17 +328,18 @@ def find_highly_persistent_contacts(contact_matrix, residue_keys, threshold=0.8)
 # RESIDUE ANALYSIS UTILITIES
 # =====================================================
 
+
 def analyze_residue_properties(universe, residue_selection="protein"):
     """
     Analyze properties of residues in the system
-    
+
     Parameters:
     -----------
     universe : MDAnalysis.Universe
         The universe to analyze
     residue_selection : str
         Selection for residues to analyze
-        
+
     Returns:
     --------
     Dict : Residue property analysis
@@ -339,23 +347,23 @@ def analyze_residue_properties(universe, residue_selection="protein"):
     residues = universe.select_atoms(residue_selection).residues
 
     properties = {
-        'total_residues': len(residues),
-        'residue_types': {},
-        'chain_distribution': {},
-        'hydrophobic_residues': 0,
-        'charged_residues': 0,
-        'polar_residues': 0
+        "total_residues": len(residues),
+        "residue_types": {},
+        "chain_distribution": {},
+        "hydrophobic_residues": 0,
+        "charged_residues": 0,
+        "polar_residues": 0,
     }
 
     # Residue classification
-    hydrophobic = ['ALA', 'VAL', 'LEU', 'ILE', 'MET', 'PHE', 'TRP', 'PRO']
-    charged = ['ARG', 'LYS', 'ASP', 'GLU', 'HIS']
-    polar = ['SER', 'THR', 'ASN', 'GLN', 'TYR', 'CYS']
+    hydrophobic = ["ALA", "VAL", "LEU", "ILE", "MET", "PHE", "TRP", "PRO"]
+    charged = ["ARG", "LYS", "ASP", "GLU", "HIS"]
+    polar = ["SER", "THR", "ASN", "GLN", "TYR", "CYS"]
 
     for residue in residues:
         # Count by type
         resname = residue.resname
-        properties['residue_types'][resname] = properties['residue_types'].get(resname, 0) + 1
+        properties["residue_types"][resname] = properties["residue_types"].get(resname, 0) + 1
 
         # Count by chain (segid fallback when chainID is unavailable)
         first_atom = residue.atoms[0]
@@ -370,15 +378,17 @@ def analyze_residue_properties(universe, residue_selection="protein"):
                 continue
         if not chainid:
             chainid = "A"
-        properties['chain_distribution'][chainid] = properties['chain_distribution'].get(chainid, 0) + 1
+        properties["chain_distribution"][chainid] = (
+            properties["chain_distribution"].get(chainid, 0) + 1
+        )
 
         # Count by chemical property
         if resname in hydrophobic:
-            properties['hydrophobic_residues'] += 1
+            properties["hydrophobic_residues"] += 1
         elif resname in charged:
-            properties['charged_residues'] += 1
+            properties["charged_residues"] += 1
         elif resname in polar:
-            properties['polar_residues'] += 1
+            properties["polar_residues"] += 1
 
     return properties
 
@@ -386,12 +396,12 @@ def analyze_residue_properties(universe, residue_selection="protein"):
 def calculate_sequence_distance_matrix(residue_keys):
     """
     Calculate sequence distance matrix for residues
-    
+
     Parameters:
     -----------
     residue_keys : List[str]
         List of residue keys in format "chain_resid"
-        
+
     Returns:
     --------
     np.ndarray : Sequence distance matrix
@@ -401,8 +411,8 @@ def calculate_sequence_distance_matrix(residue_keys):
 
     for i in range(n_residues):
         for j in range(n_residues):
-            chain_i, resid_i = residue_keys[i].split('_')
-            chain_j, resid_j = residue_keys[j].split('_')
+            chain_i, resid_i = residue_keys[i].split("_")
+            chain_j, resid_j = residue_keys[j].split("_")
 
             if chain_i == chain_j:
                 # Same chain - calculate sequence distance
@@ -418,15 +428,16 @@ def calculate_sequence_distance_matrix(residue_keys):
 # COMPARISON UTILITIES
 # =====================================================
 
+
 def calculate_network_similarity(network1, network2):
     """
     Calculate similarity between two networks
-    
+
     Parameters:
     -----------
     network1, network2 : networkx.Graph
         Networks to compare
-        
+
     Returns:
     --------
     Dict : Similarity metrics
@@ -441,10 +452,10 @@ def calculate_network_similarity(network1, network2):
     common_nodes = nodes1.intersection(nodes2)
 
     if len(common_nodes) == 0:
-        return {'error': 'No common nodes between networks'}
+        return {"error": "No common nodes between networks"}
 
-    similarity['common_nodes'] = len(common_nodes)
-    similarity['jaccard_nodes'] = len(common_nodes) / len(nodes1.union(nodes2))
+    similarity["common_nodes"] = len(common_nodes)
+    similarity["jaccard_nodes"] = len(common_nodes) / len(nodes1.union(nodes2))
 
     # Extract subgraphs with common nodes
     sub1 = network1.subgraph(common_nodes)
@@ -455,34 +466,36 @@ def calculate_network_similarity(network1, network2):
     edges2 = set(sub2.edges())
     common_edges = edges1.intersection(edges2)
 
-    similarity['common_edges'] = len(common_edges)
-    similarity['jaccard_edges'] = len(common_edges) / len(edges1.union(edges2)) if len(edges1.union(edges2)) > 0 else 0
+    similarity["common_edges"] = len(common_edges)
+    similarity["jaccard_edges"] = (
+        len(common_edges) / len(edges1.union(edges2)) if len(edges1.union(edges2)) > 0 else 0
+    )
 
     # Structural similarity
     if len(common_edges) > 0:
         try:
             # Graph edit distance (computationally expensive, so limit to small graphs)
             if len(common_nodes) <= 100:
-                similarity['graph_edit_distance'] = nx.graph_edit_distance(sub1, sub2, timeout=30)
+                similarity["graph_edit_distance"] = nx.graph_edit_distance(sub1, sub2, timeout=30)
             else:
-                similarity['graph_edit_distance'] = None
-        except:
-            similarity['graph_edit_distance'] = None
+                similarity["graph_edit_distance"] = None
+        except Exception:
+            similarity["graph_edit_distance"] = None
 
     return similarity
 
 
-def compare_centrality_distributions(centrality1, centrality2, metric='ks_test'):
+def compare_centrality_distributions(centrality1, centrality2, metric="ks_test"):
     """
     Compare centrality distributions between two networks
-    
+
     Parameters:
     -----------
     centrality1, centrality2 : Dict
         Centrality dictionaries from NetworkX
     metric : str
         Statistical test to use ('ks_test', 'mannwhitney', 'correlation')
-        
+
     Returns:
     --------
     Dict : Statistical comparison results
@@ -490,42 +503,42 @@ def compare_centrality_distributions(centrality1, centrality2, metric='ks_test')
     try:
         from scipy import stats
     except ImportError:
-        return {'error': 'SciPy required for statistical tests'}
+        return {"error": "SciPy required for statistical tests"}
 
     # Find common nodes
     common_nodes = set(centrality1.keys()).intersection(set(centrality2.keys()))
 
     if len(common_nodes) < 3:
-        return {'error': 'Not enough common nodes for statistical comparison'}
+        return {"error": "Not enough common nodes for statistical comparison"}
 
     # Extract values for common nodes
     values1 = [centrality1[node] for node in common_nodes]
     values2 = [centrality2[node] for node in common_nodes]
 
-    results = {'common_nodes': len(common_nodes)}
+    results = {"common_nodes": len(common_nodes)}
 
-    if metric == 'ks_test':
+    if metric == "ks_test":
         # Kolmogorov-Smirnov test
         statistic, p_value = stats.ks_2samp(values1, values2)
-        results['ks_statistic'] = statistic
-        results['ks_p_value'] = p_value
+        results["ks_statistic"] = statistic
+        results["ks_p_value"] = p_value
 
-    elif metric == 'mannwhitney':
+    elif metric == "mannwhitney":
         # Mann-Whitney U test
-        statistic, p_value = stats.mannwhitneyu(values1, values2, alternative='two-sided')
-        results['mw_statistic'] = statistic
-        results['mw_p_value'] = p_value
+        statistic, p_value = stats.mannwhitneyu(values1, values2, alternative="two-sided")
+        results["mw_statistic"] = statistic
+        results["mw_p_value"] = p_value
 
-    elif metric == 'correlation':
+    elif metric == "correlation":
         # Pearson correlation
         correlation, p_value = stats.pearsonr(values1, values2)
-        results['correlation'] = correlation
-        results['correlation_p_value'] = p_value
+        results["correlation"] = correlation
+        results["correlation_p_value"] = p_value
 
         # Spearman correlation
         spearman_corr, spearman_p = stats.spearmanr(values1, values2)
-        results['spearman_correlation'] = spearman_corr
-        results['spearman_p_value'] = spearman_p
+        results["spearman_correlation"] = spearman_corr
+        results["spearman_p_value"] = spearman_p
 
     return results
 
@@ -534,11 +547,13 @@ def compare_centrality_distributions(centrality1, centrality2, metric='ks_test')
 # VISUALIZATION UTILITIES
 # =====================================================
 
-def create_contact_map_figure(contact_matrix, residue_keys, title="Contact Map",
-                            chain_boundaries=None, figsize=(10, 8)):
+
+def create_contact_map_figure(
+    contact_matrix, residue_keys, title="Contact Map", chain_boundaries=None, figsize=(10, 8)
+):
     """
     Create a publication-ready contact map figure
-    
+
     Parameters:
     -----------
     contact_matrix : np.ndarray
@@ -551,21 +566,20 @@ def create_contact_map_figure(contact_matrix, residue_keys, title="Contact Map",
         Positions of chain boundaries
     figsize : Tuple[int, int]
         Figure size
-        
+
     Returns:
     --------
     matplotlib.Figure : The created figure
     """
     try:
         import matplotlib.pyplot as plt
-        import seaborn as sns
-    except ImportError:
-        raise ImportError("Matplotlib and seaborn required for visualization")
+    except ImportError as exc:
+        raise ImportError("Matplotlib required for visualization") from exc
 
     fig, ax = plt.subplots(figsize=figsize)
 
     # Create heatmap
-    im = ax.imshow(contact_matrix, origin="lower", cmap='viridis', aspect='equal')
+    im = ax.imshow(contact_matrix, origin="lower", cmap="viridis", aspect="equal")
 
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -574,13 +588,13 @@ def create_contact_map_figure(contact_matrix, residue_keys, title="Contact Map",
     # Add chain boundaries if provided
     if chain_boundaries:
         for boundary in chain_boundaries:
-            ax.axhline(y=boundary - 0.5, color='white', linestyle='--', alpha=0.7, linewidth=2)
-            ax.axvline(x=boundary - 0.5, color='white', linestyle='--', alpha=0.7, linewidth=2)
+            ax.axhline(y=boundary - 0.5, color="white", linestyle="--", alpha=0.7, linewidth=2)
+            ax.axvline(x=boundary - 0.5, color="white", linestyle="--", alpha=0.7, linewidth=2)
 
     # Labels and title
     ax.set_xlabel("Residue Index", fontsize=12)
     ax.set_ylabel("Residue Index", fontsize=12)
-    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight="bold")
 
     # Set ticks to show every nth residue
     n_residues = len(residue_keys)
@@ -589,7 +603,7 @@ def create_contact_map_figure(contact_matrix, residue_keys, title="Contact Map",
         tick_positions = range(0, n_residues, tick_spacing)
         tick_labels = [residue_keys[i] for i in tick_positions]
         ax.set_xticks(tick_positions)
-        ax.set_xticklabels(tick_labels, rotation=45, ha='right', fontsize=8)
+        ax.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=8)
         ax.set_yticks(tick_positions)
         ax.set_yticklabels(tick_labels, fontsize=8)
 
@@ -597,11 +611,12 @@ def create_contact_map_figure(contact_matrix, residue_keys, title="Contact Map",
     return fig
 
 
-def create_centrality_comparison_plot(centrality_data, centrality_type="betweenness",
-                                    simulation_names=None, figsize=(12, 6)):
+def create_centrality_comparison_plot(
+    centrality_data, centrality_type="betweenness", simulation_names=None, figsize=(12, 6)
+):
     """
     Create comparison plot of centrality measures across simulations
-    
+
     Parameters:
     -----------
     centrality_data : Dict
@@ -612,7 +627,7 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
         Names of simulations to include
     figsize : Tuple[int, int]
         Figure size
-        
+
     Returns:
     --------
     matplotlib.Figure : The created figure
@@ -620,8 +635,8 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
     try:
         import matplotlib.pyplot as plt
         import pandas as pd
-    except ImportError:
-        raise ImportError("Matplotlib and pandas required for visualization")
+    except ImportError as exc:
+        raise ImportError("Matplotlib and pandas required for visualization") from exc
 
     if centrality_type not in centrality_data:
         raise ValueError(f"Centrality type '{centrality_type}' not found in data")
@@ -633,11 +648,7 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
     for residue, sim_values in data.items():
         for sim_name, value in sim_values.items():
             if simulation_names is None or sim_name in simulation_names:
-                plot_data.append({
-                    'residue': residue,
-                    'simulation': sim_name,
-                    'centrality': value
-                })
+                plot_data.append({"residue": residue, "simulation": sim_name, "centrality": value})
 
     if not plot_data:
         raise ValueError("No data to plot")
@@ -648,15 +659,15 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
     # Box plot comparing distributions
-    df.boxplot(column='centrality', by='simulation', ax=ax1)
+    df.boxplot(column="centrality", by="simulation", ax=ax1)
     ax1.set_title(f'{centrality_type.replace("_", " ").title()} Distribution')
-    ax1.set_ylabel('Centrality Value')
+    ax1.set_ylabel("Centrality Value")
 
     # Scatter plot showing residue-wise comparison (if 2 simulations)
-    unique_sims = df['simulation'].unique()
+    unique_sims = df["simulation"].unique()
     if len(unique_sims) == 2:
-        sim1_data = df[df['simulation'] == unique_sims[0]].set_index('residue')['centrality']
-        sim2_data = df[df['simulation'] == unique_sims[1]].set_index('residue')['centrality']
+        sim1_data = df[df["simulation"] == unique_sims[0]].set_index("residue")["centrality"]
+        sim2_data = df[df["simulation"] == unique_sims[1]].set_index("residue")["centrality"]
 
         # Align data for common residues
         common_residues = sim1_data.index.intersection(sim2_data.index)
@@ -665,16 +676,27 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
             y_vals = sim2_data.loc[common_residues].values
 
             ax2.scatter(x_vals, y_vals, alpha=0.6)
-            ax2.plot([0, max(x_vals.max(), y_vals.max())], [0, max(x_vals.max(), y_vals.max())],
-                    'r--', alpha=0.8, label='y=x')
-            ax2.set_xlabel(f'{unique_sims[0]} Centrality')
-            ax2.set_ylabel(f'{unique_sims[1]} Centrality')
-            ax2.set_title('Residue-wise Centrality Comparison')
+            ax2.plot(
+                [0, max(x_vals.max(), y_vals.max())],
+                [0, max(x_vals.max(), y_vals.max())],
+                "r--",
+                alpha=0.8,
+                label="y=x",
+            )
+            ax2.set_xlabel(f"{unique_sims[0]} Centrality")
+            ax2.set_ylabel(f"{unique_sims[1]} Centrality")
+            ax2.set_title("Residue-wise Centrality Comparison")
             ax2.legend()
     else:
-        ax2.axis('off')
-        ax2.text(0.5, 0.5, 'Scatter plot available\nfor 2 simulations only',
-                ha='center', va='center', transform=ax2.transAxes)
+        ax2.axis("off")
+        ax2.text(
+            0.5,
+            0.5,
+            "Scatter plot available\nfor 2 simulations only",
+            ha="center",
+            va="center",
+            transform=ax2.transAxes,
+        )
 
     plt.tight_layout()
     return fig
@@ -684,10 +706,11 @@ def create_centrality_comparison_plot(centrality_data, centrality_type="betweenn
 # FILE I/O UTILITIES
 # =====================================================
 
+
 def save_analysis_config(config, filepath):
     """
     Save analysis configuration to file
-    
+
     Parameters:
     -----------
     config : AnalysisConfig
@@ -698,29 +721,29 @@ def save_analysis_config(config, filepath):
     import json
 
     config_dict = {
-        'cutoffs': config.cutoffs,
-        'interaction_types': config.interaction_types,
-        'threshold': config.threshold,
-        'timeout_seconds': config.timeout_seconds,
-        'segments': config.segments,
-        'preprocess': config.preprocess,
-        'align_selection': config.align_selection,
-        'center_selection': config.center_selection
+        "cutoffs": config.cutoffs,
+        "interaction_types": config.interaction_types,
+        "threshold": config.threshold,
+        "timeout_seconds": config.timeout_seconds,
+        "segments": config.segments,
+        "preprocess": config.preprocess,
+        "align_selection": config.align_selection,
+        "center_selection": config.center_selection,
     }
 
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         json.dump(config_dict, f, indent=2)
 
 
 def load_analysis_config(filepath):
     """
     Load analysis configuration from file
-    
+
     Parameters:
     -----------
     filepath : str
         Path to configuration file
-        
+
     Returns:
     --------
     AnalysisConfig : Loaded configuration
@@ -738,7 +761,7 @@ def load_analysis_config(filepath):
 def export_network_for_cytoscape(network, output_path, include_positions=True):
     """
     Export network in format suitable for Cytoscape
-    
+
     Parameters:
     -----------
     network : networkx.Graph
@@ -755,9 +778,9 @@ def export_network_for_cytoscape(network, output_path, include_positions=True):
         try:
             pos = nx.spring_layout(network, k=1, iterations=50)
             for node in network.nodes():
-                network.nodes[node]['x'] = pos[node][0]
-                network.nodes[node]['y'] = pos[node][1]
-        except:
+                network.nodes[node]["x"] = pos[node][0]
+                network.nodes[node]["y"] = pos[node][1]
+        except Exception:
             print("Warning: Could not generate layout positions")
 
     # Export as GraphML (Cytoscape-compatible)
@@ -768,6 +791,7 @@ def export_network_for_cytoscape(network, output_path, include_positions=True):
 # =====================================================
 # PERFORMANCE UTILITIES
 # =====================================================
+
 
 class PerformanceMonitor:
     """Monitor and report performance of analysis steps"""
@@ -803,12 +827,12 @@ class PerformanceMonitor:
         total_time = sum(self.timings.values())
 
         summary = {
-            'total_time': total_time,
-            'step_timings': self.timings.copy(),
-            'step_percentages': {
+            "total_time": total_time,
+            "step_timings": self.timings.copy(),
+            "step_percentages": {
                 step: (time_val / total_time * 100) if total_time > 0 else 0
                 for step, time_val in self.timings.items()
-            }
+            },
         }
 
         return summary
@@ -822,6 +846,6 @@ class PerformanceMonitor:
         print(f"Total time: {summary['total_time']:.2f} seconds")
         print("\nStep breakdown:")
 
-        for step, percentage in summary['step_percentages'].items():
-            time_val = summary['step_timings'][step]
+        for step, percentage in summary["step_percentages"].items():
+            time_val = summary["step_timings"][step]
             print(f"  {step}: {time_val:.2f}s ({percentage:.1f}%)")

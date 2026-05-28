@@ -77,6 +77,7 @@ except ImportError:
 # Optional dependency detection
 # ---------------------------------------------------------------------------
 
+
 def _detect(module_name: str) -> bool:
     """Return True if *module_name* can be imported."""
     import importlib.util
@@ -149,8 +150,7 @@ def get_version_info() -> dict:
         "features": dict(FEATURES),
     }
 
-    for name, attr in (("MDAnalysis", "mdanalysis_version"),
-                        ("networkx", "networkx_version")):
+    for name, attr in (("MDAnalysis", "mdanalysis_version"), ("networkx", "networkx_version")):
         try:
             mod = __import__(name)
             info[attr] = getattr(mod, "__version__", "unknown")

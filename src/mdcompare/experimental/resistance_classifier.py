@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -37,7 +37,7 @@ logger = logging.getLogger("mdcompare")
 
 # Order of scalar feature blocks produced for each trajectory. Kept explicit
 # so feature-importance output downstream is interpretable.
-_BASE_FEATURE_NAMES: List[str] = [
+_BASE_FEATURE_NAMES: list[str] = [
     "avg_betweenness_centrality",
     "pc1_cumulative_variance",
     "pc2_cumulative_variance",
@@ -70,7 +70,7 @@ def _safe_std(values) -> float:
     return float(arr.std()) if arr.size else 0.0
 
 
-def _cumulative_variance(pca_result: Optional[Dict[str, Any]], n: int = 5) -> np.ndarray:
+def _cumulative_variance(pca_result: dict[str, Any] | None, n: int = 5) -> np.ndarray:
     """Extract the first *n* cumulative-variance values from a PCA result.
 
     Accepts either a pre-computed ``cumulative_variance`` array or raw
@@ -103,10 +103,10 @@ def _cumulative_variance(pca_result: Optional[Dict[str, Any]], n: int = 5) -> np
 
 
 def _feature_vector_for(
-    network_result: Optional[Dict[str, Any]],
-    pca_result: Optional[Dict[str, Any]],
-    pocket_result: Optional[Dict[str, Any]],
-    thermo_result: Optional[Dict[str, Any]],
+    network_result: dict[str, Any] | None,
+    pca_result: dict[str, Any] | None,
+    pocket_result: dict[str, Any] | None,
+    thermo_result: dict[str, Any] | None,
 ) -> np.ndarray:
     """Build the fixed-length feature vector for one trajectory."""
     # Network: average betweenness centrality.
@@ -135,9 +135,9 @@ def _feature_vector_for(
 
 
 def prepare_ml_features(
-    per_trajectory_results: Dict[str, Dict[str, Any]],
-    labels: Optional[Sequence[int]] = None,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    per_trajectory_results: dict[str, dict[str, Any]],
+    labels: Sequence[int] | None = None,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Assemble a feature matrix from per-trajectory MD-Compare results.
 
     Parameters
@@ -186,11 +186,7 @@ def prepare_ml_features(
         )
 
     X = np.vstack(features)
-    y = (
-        np.asarray(labels, dtype=int)
-        if labels is not None
-        else np.zeros(len(traj_ids), dtype=int)
-    )
+    y = np.asarray(labels, dtype=int) if labels is not None else np.zeros(len(traj_ids), dtype=int)
     return X, y, list(_BASE_FEATURE_NAMES)
 
 
@@ -198,19 +194,20 @@ def prepare_ml_features(
 # Classification
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ClassifierReport:
     """Outcome of :func:`train_resistance_classifier`."""
 
-    models: Dict[str, Any] = field(default_factory=dict)
-    cv_scores: Dict[str, np.ndarray] = field(default_factory=dict)
-    mean_accuracy: Dict[str, float] = field(default_factory=dict)
-    feature_importance: Dict[str, Optional[np.ndarray]] = field(default_factory=dict)
-    feature_names: List[str] = field(default_factory=list)
+    models: dict[str, Any] = field(default_factory=dict)
+    cv_scores: dict[str, np.ndarray] = field(default_factory=dict)
+    mean_accuracy: dict[str, float] = field(default_factory=dict)
+    feature_importance: dict[str, np.ndarray | None] = field(default_factory=dict)
+    feature_names: list[str] = field(default_factory=list)
     scaler: Any = None
 
     @property
-    def best_model_name(self) -> Optional[str]:
+    def best_model_name(self) -> str | None:
         """Name of the model with the highest mean cross-validation accuracy."""
         if not self.mean_accuracy:
             return None
@@ -226,7 +223,7 @@ class ClassifierReport:
 def train_resistance_classifier(
     features: np.ndarray,
     labels: np.ndarray,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
     cv_folds: int = 5,
     random_state: int = 42,
 ) -> ClassifierReport:
@@ -277,9 +274,7 @@ def train_resistance_classifier(
     )
 
     models = {
-        "RandomForest": RandomForestClassifier(
-            n_estimators=100, random_state=random_state
-        ),
+        "RandomForest": RandomForestClassifier(n_estimators=100, random_state=random_state),
         "SVM": SVC(kernel="rbf", random_state=random_state),
     }
 
@@ -305,9 +300,7 @@ def train_resistance_classifier(
             continue
 
         if can_cross_validate:
-            scores = cross_val_score(
-                model, features_scaled, labels, cv=effective_folds
-            )
+            scores = cross_val_score(model, features_scaled, labels, cv=effective_folds)
             report.cv_scores[name] = scores
             report.mean_accuracy[name] = float(scores.mean())
         else:
@@ -316,9 +309,7 @@ def train_resistance_classifier(
 
         model.fit(features_scaled, labels)
         report.models[name] = model
-        report.feature_importance[name] = getattr(
-            model, "feature_importances_", None
-        )
+        report.feature_importance[name] = getattr(model, "feature_importances_", None)
 
     logger.info(
         "Trained resistance classifiers on %d samples; best=%s",
@@ -347,7 +338,8 @@ def predict_resistance(report: ClassifierReport, features: np.ndarray) -> np.nda
 # Optional graph-neural-network path (heavy dependency, lazily imported)
 # ---------------------------------------------------------------------------
 
-def graph_neural_network_analysis(network_results: Dict[str, Dict[str, Any]]):
+
+def graph_neural_network_analysis(network_results: dict[str, dict[str, Any]]):
     """Convert residue networks into PyTorch-Geometric graphs.
 
     This is an **optional** feature requiring ``torch`` and
@@ -394,9 +386,7 @@ def graph_neural_network_analysis(network_results: Dict[str, Dict[str, Any]]):
 
         edges = list(data.get("persistent_contacts", []))
         if edges:
-            edge_index = (
-                torch.tensor(edges, dtype=torch.long).t().contiguous()
-            )
+            edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
         else:
             edge_index = torch.empty((2, 0), dtype=torch.long)
 

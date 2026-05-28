@@ -34,10 +34,6 @@ jobs:
   lint:
     name: Lint & format check
     runs-on: ubuntu-latest
-    # Non-blocking: the legacy modules still carry pre-package style debt.
-    # Lint runs and reports, but does not fail the pipeline yet. Remove
-    # continue-on-error once src/ is fully ruff/black clean.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +52,9 @@ jobs:
 
       - name: Black (check only)
         run: black --check src/ tests/
+
+      - name: requirements.txt in sync with pyproject.toml
+        run: python scripts/generate_requirements.py --check
 
   build:
     name: Build distribution

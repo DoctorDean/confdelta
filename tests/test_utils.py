@@ -10,6 +10,7 @@ from mdcompare import utils
 # Network robustness / assortativity
 # ---------------------------------------------------------------------------
 
+
 class TestNetworkRobustness:
     def test_robustness_returns_dict(self, small_graph):
         result = utils.calculate_network_robustness(small_graph)
@@ -31,6 +32,7 @@ class TestNetworkRobustness:
 # ---------------------------------------------------------------------------
 # Contact persistence
 # ---------------------------------------------------------------------------
+
 
 class TestContactPersistence:
     def test_persistence_basic(self):
@@ -61,6 +63,7 @@ class TestContactPersistence:
 # Sequence distance matrix
 # ---------------------------------------------------------------------------
 
+
 class TestSequenceDistance:
     def test_sequence_distance_shape(self):
         keys = ["A_1", "A_2", "A_3", "B_1", "B_2"]
@@ -82,6 +85,7 @@ class TestSequenceDistance:
 # Network similarity
 # ---------------------------------------------------------------------------
 
+
 class TestNetworkSimilarity:
     def test_identical_networks_are_similar(self, small_graph):
         result = utils.calculate_network_similarity(small_graph, small_graph)
@@ -98,6 +102,7 @@ class TestNetworkSimilarity:
 # ---------------------------------------------------------------------------
 # Performance monitor
 # ---------------------------------------------------------------------------
+
 
 class TestPerformanceMonitor:
     def test_step_timing(self):
@@ -119,6 +124,7 @@ class TestPerformanceMonitor:
 # ---------------------------------------------------------------------------
 # Config round-trip
 # ---------------------------------------------------------------------------
+
 
 class TestConfigIO:
     def test_save_and_load_config(self, tmp_path):

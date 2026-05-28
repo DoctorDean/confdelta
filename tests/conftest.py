@@ -14,8 +14,10 @@ import pytest
 # Synthetic trajectory generation
 # ---------------------------------------------------------------------------
 
-def _build_universe(n_residues: int = 12, n_frames: int = 25, n_chains: int = 2,
-                     with_chainids: bool = True):
+
+def _build_universe(
+    n_residues: int = 12, n_frames: int = 25, n_chains: int = 2, with_chainids: bool = True
+):
     """Build a tiny in-memory MDAnalysis Universe of CA-only "residues".
 
     Each residue is a single CA atom. Coordinates are a smooth base
@@ -104,10 +106,17 @@ def small_graph():
 
     g = nx.Graph()
     edges = [
-        ("A_1", "A_2"), ("A_2", "A_3"), ("A_3", "A_4"),
-        ("A_4", "A_5"), ("A_1", "A_3"), ("A_2", "A_5"),
-        ("A_5", "B_1"), ("B_1", "B_2"), ("B_2", "B_3"),
-        ("B_3", "B_4"), ("B_1", "B_3"),
+        ("A_1", "A_2"),
+        ("A_2", "A_3"),
+        ("A_3", "A_4"),
+        ("A_4", "A_5"),
+        ("A_1", "A_3"),
+        ("A_2", "A_5"),
+        ("A_5", "B_1"),
+        ("B_1", "B_2"),
+        ("B_2", "B_3"),
+        ("B_3", "B_4"),
+        ("B_1", "B_3"),
     ]
     g.add_edges_from(edges)
     return g

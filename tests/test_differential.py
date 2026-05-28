@@ -21,6 +21,7 @@ from mdcompare.differential import (
 # Configuration & analyzer construction
 # ---------------------------------------------------------------------------
 
+
 class TestDifferentialConfig:
     def test_defaults(self):
         cfg = DifferentialConfig()
@@ -56,6 +57,7 @@ class TestDifferentialAnalyzer:
 # ---------------------------------------------------------------------------
 # Network comparator
 # ---------------------------------------------------------------------------
+
 
 class TestNetworkComparator:
     @staticmethod
@@ -96,6 +98,7 @@ class TestNetworkComparator:
 # Dynamics comparator
 # ---------------------------------------------------------------------------
 
+
 class TestDynamicsComparator:
     @staticmethod
     def _dyn(n=6, seed=0):
@@ -120,9 +123,7 @@ class TestDynamicsComparator:
         comparator = DynamicsComparator(DifferentialConfig())
         dyn = self._dyn(seed=3)
         result = comparator.compare_dynamics(dyn, dyn)
-        np.testing.assert_allclose(
-            result.dccm_difference_matrix, 0.0, atol=1e-9
-        )
+        np.testing.assert_allclose(result.dccm_difference_matrix, 0.0, atol=1e-9)
 
     def test_pca_variance_changes_present(self):
         comparator = DynamicsComparator(DifferentialConfig())
@@ -133,6 +134,7 @@ class TestDynamicsComparator:
 # ---------------------------------------------------------------------------
 # Allosteric comparator
 # ---------------------------------------------------------------------------
+
 
 class TestAllostericComparator:
     @staticmethod
@@ -148,8 +150,12 @@ class TestAllostericComparator:
                 {"node": "A_2", "hotspot_score": 0.7, "frequency": 8},
             ],
             "pathways": [
-                {"source": "A_1", "target": "B_1", "efficiency": 0.8,
-                 "path": ["A_1", "A_2", "B_1"]},
+                {
+                    "source": "A_1",
+                    "target": "B_1",
+                    "efficiency": 0.8,
+                    "path": ["A_1", "A_2", "B_1"],
+                },
             ],
         }
 
@@ -172,6 +178,7 @@ class TestAllostericComparator:
 # ---------------------------------------------------------------------------
 # CLI integration surface
 # ---------------------------------------------------------------------------
+
 
 def test_cli_exposes_differential_entrypoint():
     """The CLI module must expose the comprehensive differential runner."""

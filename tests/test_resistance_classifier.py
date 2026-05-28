@@ -18,9 +18,7 @@ def _mock_traj_block(centrality_level: float, entropy: float):
     return {
         "network": {
             "metrics": {
-                "betweenness_centrality": {
-                    i: centrality_level + 0.01 * i for i in range(10)
-                }
+                "betweenness_centrality": {i: centrality_level + 0.01 * i for i in range(10)}
             }
         },
         "pca": {"cumulative_variance": [0.4, 0.65, 0.8, 0.9, 0.95]},
@@ -30,15 +28,13 @@ def _mock_traj_block(centrality_level: float, entropy: float):
 
 
 def _mock_results(n: int):
-    return {
-        f"sub_traj_{i}": _mock_traj_block(0.1 * (i + 1), 5.0 + i)
-        for i in range(n)
-    }
+    return {f"sub_traj_{i}": _mock_traj_block(0.1 * (i + 1), 5.0 + i) for i in range(n)}
 
 
 # ---------------------------------------------------------------------------
 # Feature preparation
 # ---------------------------------------------------------------------------
+
 
 class TestPrepareFeatures:
     def test_feature_matrix_shape(self):
@@ -73,9 +69,7 @@ class TestPrepareFeatures:
         assert np.all(y == 0)
 
     def test_cumulative_variance_derived_from_eigenvalues(self):
-        results = {
-            "t0": {"pca": {"pca_eigenvalues": [4.0, 3.0, 2.0, 1.0]}}
-        }
+        results = {"t0": {"pca": {"pca_eigenvalues": [4.0, 3.0, 2.0, 1.0]}}}
         X, _, names = prepare_ml_features(results)
         idx = names.index("pc1_cumulative_variance")
         # First cumulative-variance entry = 4 / 10 = 0.4.
@@ -86,28 +80,23 @@ class TestPrepareFeatures:
 # Classifier training
 # ---------------------------------------------------------------------------
 
+
 class TestTrainClassifier:
     def test_training_produces_report(self):
-        X, y, names = prepare_ml_features(
-            _mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-        )
+        X, y, names = prepare_ml_features(_mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
         report = train_resistance_classifier(X, y, feature_names=names)
         assert isinstance(report, ClassifierReport)
         assert "RandomForest" in report.models
         assert "SVM" in report.models
 
     def test_best_model_selected(self):
-        X, y, names = prepare_ml_features(
-            _mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-        )
+        X, y, names = prepare_ml_features(_mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
         report = train_resistance_classifier(X, y, feature_names=names)
         assert report.best_model_name in {"RandomForest", "SVM"}
         assert report.best_model is not None
 
     def test_feature_importance_present_for_random_forest(self):
-        X, y, names = prepare_ml_features(
-            _mock_results(8), labels=[0, 0, 0, 0, 1, 1, 1, 1]
-        )
+        X, y, names = prepare_ml_features(_mock_results(8), labels=[0, 0, 0, 0, 1, 1, 1, 1])
         report = train_resistance_classifier(X, y, feature_names=names)
         importance = report.feature_importance["RandomForest"]
         assert importance is not None
@@ -134,20 +123,17 @@ class TestTrainClassifier:
 # Prediction
 # ---------------------------------------------------------------------------
 
+
 class TestPredict:
     def test_predict_returns_labels(self):
-        X, y, names = prepare_ml_features(
-            _mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-        )
+        X, y, names = prepare_ml_features(_mock_results(10), labels=[0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
         report = train_resistance_classifier(X, y, feature_names=names)
         preds = predict_resistance(report, X)
         assert preds.shape == (10,)
         assert set(np.unique(preds)).issubset({0, 1})
 
     def test_predict_single_vector(self):
-        X, y, names = prepare_ml_features(
-            _mock_results(8), labels=[0, 0, 0, 0, 1, 1, 1, 1]
-        )
+        X, y, names = prepare_ml_features(_mock_results(8), labels=[0, 0, 0, 0, 1, 1, 1, 1])
         report = train_resistance_classifier(X, y, feature_names=names)
         preds = predict_resistance(report, X[0])
         assert preds.shape == (1,)
