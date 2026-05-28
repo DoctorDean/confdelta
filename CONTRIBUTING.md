@@ -58,17 +58,19 @@ Before creating an issue, please:
 git clone https://github.com/DoctorDean/md-compare.git
 cd md-compare
 
-# Create development environment
-conda create -n md_compare_dev python=3.9
-conda activate md_compare_dev
+# Create development environment (Python 3.8-3.12 supported)
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -e .  # Install package in development mode
-
-# Install development dependencies
-pip install pytest pytest-cov black flake8 sphinx
+# Install the package with all development tooling
+pip install -e ".[dev]"            # pytest, ruff, black, mypy, build, twine
+# Optional analysis features:
+pip install -e ".[all]"            # MSM, Leiden, plotting, ML extras
 ```
+
+Note: `requirements.txt` is generated from `pyproject.toml` and must not be
+edited by hand. After changing dependencies in `pyproject.toml`, regenerate
+it with `python scripts/generate_requirements.py` (CI fails if it is stale).
 
 ### Code Style
 

@@ -19,11 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pyproject.toml` (PEP 621) replacing `setup.py`, with optional-dependency
   extras: `msm`, `deeptime`, `leiden`, `viz`, `ml`, `dev`, `docs`, `all`.
 - `python -m mdcompare` entry point alongside the `md-compare` console script.
-- Real pytest suite (58 tests) with synthetic in-memory trajectory fixtures
+- Real pytest suite (80 tests) with synthetic in-memory trajectory fixtures
   requiring no external data package; covers core, utils, differential
-  analysis and the experimental resistance classifier.
+  analysis, the MSM backends and the experimental resistance classifier.
 - GitHub Actions CI: test matrix (Python 3.8-3.12), lint (ruff + black) and
   a build job validating the sdist/wheel with `twine check`.
+- `scripts/generate_requirements.py`: regenerates `requirements.txt` from
+  `pyproject.toml` so the two cannot drift; `--check` mode guards this in CI.
 - `mdcompare.experimental` subpackage with a hardened resistance classifier
   (`prepare_ml_features`, `train_resistance_classifier`, `predict_resistance`,
   optional GNN path), promoted from the former loose `in-progress/` script.
@@ -35,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contact-frequency double counting: `_compute_distance_contacts` collapsed
   to unique residue pairs per frame, so contact-map values are now true
   frequencies in `[0, 1]`.
+- MSM analysis no longer crashes (`index 0 out of bounds`) when a model
+  degenerates to a single state on short or non-equilibrium trajectories; it
+  now reports the situation and continues.
+- `_compute_pairwise_distances` no longer attempts multi-GB allocations on
+  all-atom selections; atoms are subsampled to `msm_max_distance_atoms`.
 - Stale `md_compare_core` import inside `utils.load_analysis_config`.
 
 ### Changed
