@@ -292,3 +292,67 @@ parse against the real argument parser.
 documented CLI flags did not exist. That is not a mistake anyone makes
 deliberately — it is what happens when documentation and code drift for 23
 commits with nothing checking. Prose review does not catch it; a test does.
+
+---
+
+## The ensemble input model
+
+### D-020 · The internal representation of every ensemble is an MDAnalysis Universe
+
+**Decision.** All four `Ensemble` constructors normalise to a single internal
+form: an MDAnalysis `Universe` carrying N frames, possibly in memory
+(`MemoryReader`). Source-specific handling lives only in the constructors.
+
+**Reasoning.** The verified-correct analysis pipeline (contact maps, DCCM, PCA,
+landscapes, MSM) already consumes a `Universe`. Making `Universe` the common
+representation means every source — trajectory, multi-model PDB, structure set,
+coordinate array — reaches that pipeline unchanged, so the new input breadth
+costs nothing in the analysis code and inherits its correctness. The
+alternative, a bespoke ensemble representation with its own analysis paths,
+would have doubled the surface to verify.
+
+### D-021 · `from_coordinates` requires a topology
+
+**Decision.** Building an ensemble from a raw coordinate array requires a
+topology (a structure file or an existing Universe), not coordinates alone.
+
+**Reasoning.** confdelta's analyses are residue-level: contact networks,
+per-residue centrality, allosteric paths between named residues. None of that
+is defined on an anonymous point cloud — you need to know which atom is which
+residue of which chain. A topology supplies that. Crucially a topology is a
+*structure*, not a trajectory, so requiring one does not reintroduce the
+trajectory-file dependency the ensemble model exists to remove. Generative and
+predicted ensembles always have an associated topology (the sequence they were
+generated for), so this costs their use case nothing.
+
+### D-022 · Bridge to MDSimulation rather than rewrite the pipeline now
+
+**Decision.** `Ensemble.to_simulation()` produces an `MDSimulation` by
+injecting the already-loaded universe, and the analysis pipeline consumes that.
+`MDSimulation` is not yet removed.
+
+**Reasoning.** `MDSimulation` is threaded through thousands of lines of
+analysis and output code. Replacing it wholesale in the same change that
+introduces `Ensemble` would make an already-large diff unreviewable and would
+mix a new abstraction with a risky refactor. The bridge lets `Ensemble` become
+the public input type immediately while `MDSimulation` is retired
+incrementally behind it. The injection path is the same one the test fixtures
+already use, so it is well exercised.
+
+**Revisit at.** When the comparators are rewritten to return typed structured
+results (the next phase), `MDSimulation` can be collapsed into `Ensemble`.
+
+### D-023 · Replicates are accepted now, used later
+
+**Decision.** `EnsembleGroup` holds N replicates today, but
+`run_ensemble_comparison` analyses only the first and logs a warning when there
+are more.
+
+**Reasoning.** The replicate-aware *statistics* (permutation test over
+replicate-level values, D-005) are the next body of work. But the input model
+must carry replicates now, because changing the shape of the comparison API
+later — from "one ensemble per condition" to "a group per condition" — would be
+a second breaking change for every caller. Accepting the group shape now and
+filling in the statistics behind it avoids that. Using only the first replicate
+in the meantime is honest (it warns) and is no worse than the current
+single-run behaviour.

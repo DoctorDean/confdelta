@@ -80,8 +80,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dynamic-analysis guard returned early in that case, so an MSM-only
   configuration silently produced nothing.
 
+- `DifferentialAnalyzer` no longer creates its seven-directory output tree on
+  construction; the tree is created at the start of a run. Constructing an
+  analyzer -- to reach its comparators, or in a test -- now has no filesystem
+  side effects.
+
+### Fixed
+
+- The full `DifferentialAnalyzer` run had never worked: it passed
+  `run_analysis(...)[name]` -- a summary dict -- where the comparison step
+  expected an `MDSimulation` and read `.network_metrics` / `.dynamic_analysis`
+  off it. The pipeline now threads the real simulation through, and an
+  end-to-end integration test covers it.
+
 ### Added
 
+- **`confdelta.ensemble`** -- a source-agnostic input model. `Ensemble` is a
+  set of conformations of one system, built from any of four sources through
+  `Ensemble.from_trajectory`, `.from_pdb_models` (multi-model PDB),
+  `.from_structures` (a set of predicted structures) or `.from_coordinates` (an
+  in-memory array), and normalised to one internal representation. This lifts
+  the previous restriction to trajectory files, so ensembles from NMR, AlphaFold
+  subsampling or a generative model can be compared. `EnsembleGroup` holds N
+  replicate ensembles as one condition, the type the comparison API accepts.
+  Both are exported from the top level.
+- `DifferentialAnalyzer.run_ensemble_comparison(group_a, group_b, config)`, the
+  ensemble-based comparison entry point. `run_differential_analysis` (the
+  file-path method) is now a thin wrapper over it.
+- `MDCompare.add_prepared_simulation()`, to register an already-loaded
+  simulation without file IO -- the bridge the ensemble model uses.
 - `confdelta.config`: strict JSON config loading, with did-you-mean suggestions
   for mistyped keys and sections.
 - CLI input validation at the boundary: files must exist, not be directories,
