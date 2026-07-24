@@ -720,7 +720,11 @@ class NetworkAnalyzer:
         """
         dynamic_results = {}
 
-        if not self.config.compute_dccm and not self.config.compute_pca:
+        # MSM estimation needs the same collected coordinates as DCCM and PCA,
+        # so it must be part of this guard. Omitting it meant compute_msm=True
+        # with DCCM and PCA both disabled returned an empty dict without ever
+        # attempting -- or reporting that it had skipped -- the MSM.
+        if not (self.config.compute_dccm or self.config.compute_pca or self.config.compute_msm):
             return dynamic_results
 
         print("Computing dynamic analysis (DCCM and PCA)...")

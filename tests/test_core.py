@@ -216,6 +216,30 @@ class TestMSMIntegration:
         with pytest.raises(RuntimeError, match="estimation failed"):
             analyzer._build_msm_model(np.zeros(100, dtype=int))
 
+    def test_msm_only_config_still_runs_the_msm(self, synthetic_simulation, monkeypatch):
+        """compute_msm=True must be honoured with DCCM and PCA both disabled.
+
+        The dynamic-analysis guard previously returned early unless DCCM or PCA
+        was requested, so an MSM-only configuration silently produced nothing
+        and never reported that it had skipped.
+        """
+        from confdelta import core as core_mod
+
+        if not core_mod.MSM_AVAILABLE:
+            pytest.skip("no MSM backend installed")
+
+        called = []
+        analyzer = NetworkAnalyzer(
+            AnalysisConfig(compute_msm=True, compute_dccm=False, compute_pca=False)
+        )
+        monkeypatch.setattr(
+            analyzer, "_compute_msm_analysis", lambda *a, **k: called.append(1) or {"ok": True}
+        )
+
+        results = analyzer.compute_dynamic_analysis(synthetic_simulation)
+        assert called, "MSM analysis was never attempted"
+        assert results["msm_analysis"] == {"ok": True}
+
     def test_msm_failure_is_recorded_as_an_error_not_a_result(
         self, synthetic_simulation, monkeypatch
     ):
@@ -229,7 +253,7 @@ class TestMSMIntegration:
             raise RuntimeError("estimation failed")
 
         analyzer = NetworkAnalyzer(
-            AnalysisConfig(compute_msm=True, compute_dccm=True, compute_pca=False)
+            AnalysisConfig(compute_msm=True, compute_dccm=False, compute_pca=False)
         )
         monkeypatch.setattr(analyzer, "_compute_msm_analysis", _boom)
 
