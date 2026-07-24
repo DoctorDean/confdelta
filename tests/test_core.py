@@ -196,3 +196,43 @@ class TestMSMIntegration:
         # 50 atoms -> 50*49/2 = 1225 pairwise distances, not 400*399/2.
         assert features.shape[0] == 20
         assert features.shape[1] == 50 * 49 // 2
+
+    def test_failed_estimation_raises_rather_than_fabricating(self, monkeypatch):
+        """A failed MSM estimate must propagate, never return invented kinetics.
+
+        Regression guard. This previously fell back to a hand-rolled
+        "SimplifiedMSM" with invented exponential-decay eigenvalues, a uniform
+        stationary distribution, and the literal implied timescales
+        [10.0, 5.0, 2.0], which downstream analysis consumed as estimates.
+        """
+        from confdelta import msm_backends
+
+        def _boom(*args, **kwargs):
+            raise RuntimeError("estimation failed")
+
+        monkeypatch.setattr(msm_backends, "build_msm", _boom)
+
+        analyzer = NetworkAnalyzer(AnalysisConfig(msm_lag_time=2))
+        with pytest.raises(RuntimeError, match="estimation failed"):
+            analyzer._build_msm_model(np.zeros(100, dtype=int))
+
+    def test_msm_failure_is_recorded_as_an_error_not_a_result(
+        self, synthetic_simulation, monkeypatch
+    ):
+        """compute_dynamic_analysis records the failure instead of inventing data."""
+        from confdelta import core as core_mod
+
+        if not core_mod.MSM_AVAILABLE:
+            pytest.skip("no MSM backend installed")
+
+        def _boom(*args, **kwargs):
+            raise RuntimeError("estimation failed")
+
+        analyzer = NetworkAnalyzer(
+            AnalysisConfig(compute_msm=True, compute_dccm=True, compute_pca=False)
+        )
+        monkeypatch.setattr(analyzer, "_compute_msm_analysis", _boom)
+
+        results = analyzer.compute_dynamic_analysis(synthetic_simulation)
+        assert "error" in results["msm_analysis"]
+        assert "estimation failed" in results["msm_analysis"]["error"]

@@ -1231,100 +1231,40 @@ class NetworkAnalyzer:
     ) -> tuple[Any, np.ndarray, list[np.ndarray]]:
         """Build an MSM with lag-time handling.
 
-        Estimation is delegated to confdelta.msm_backends (deeptime). On
-        failure, falls back to a SimplifiedMSM that exposes the same
-        attribute surface so downstream analysis still runs.
+        Estimation is delegated to confdelta.msm_backends (deeptime).
+
+        If estimation fails this raises. It does **not** substitute an
+        approximate model: a previous version fell back to a hand-rolled
+        "SimplifiedMSM" whose eigenvalues were an invented exponential decay,
+        whose stationary distribution was uniform, and which returned the
+        literal implied timescales [10.0, 5.0, 2.0]. Downstream analysis
+        consumed those as if they were estimates. Failing here is caught by
+        compute_dynamic_analysis, which records the error rather than
+        reporting fabricated kinetics.
         """
         from .msm_backends import build_msm
 
-        try:
-            # Clamp the requested lag time to what the trajectory supports.
-            max_lag = max(2, min(100, len(discrete_trajectory) // 10))
-            final_lag = self.config.msm_lag_time
-            if final_lag > max_lag:
-                final_lag = max_lag // 2
-                print(f"  Reducing lag time to {final_lag} (max available: {max_lag})")
-            final_lag = max(1, final_lag)
+        # Clamp the requested lag time to what the trajectory supports.
+        max_lag = max(2, min(100, len(discrete_trajectory) // 10))
+        final_lag = self.config.msm_lag_time
+        if final_lag > max_lag:
+            final_lag = max_lag // 2
+            print(f"  Reducing lag time to {final_lag} (max available: {max_lag})")
+        final_lag = max(1, final_lag)
 
-            msm_model, lag_times, timescales = build_msm(
-                discrete_trajectory,
-                lag=final_lag,
-                n_timescales=self.config.kinetic_timescales_count,
-                backend=self.config.msm_backend,
-            )
+        msm_model, lag_times, timescales = build_msm(
+            discrete_trajectory,
+            lag=final_lag,
+            n_timescales=self.config.kinetic_timescales_count,
+            backend=self.config.msm_backend,
+        )
 
-            if hasattr(msm_model, "nstates_full"):
-                active = getattr(msm_model, "active_set", None)
-                n_active = len(active) if active is not None else msm_model.nstates
-                print(f"  MSM uses {n_active} of {msm_model.nstates_full} total states")
+        if hasattr(msm_model, "nstates_full"):
+            active = getattr(msm_model, "active_set", None)
+            n_active = len(active) if active is not None else msm_model.nstates
+            print(f"  MSM uses {n_active} of {msm_model.nstates_full} total states")
 
-            return msm_model, lag_times, timescales
-
-        except Exception as e:
-            print(f"  MSM model construction failed: {e}")
-            print("  Creating simplified analysis with basic statistics...")
-
-            # Create a simplified analysis when MSM construction fails
-            unique_states = np.unique(discrete_trajectory)
-            n_states = len(unique_states)
-
-            # Calculate basic transition statistics
-            transitions = []
-            for i in range(len(discrete_trajectory) - 1):
-                if discrete_trajectory[i] != discrete_trajectory[i + 1]:
-                    transitions.append((discrete_trajectory[i], discrete_trajectory[i + 1]))
-
-            # Create minimal model object for compatibility
-            class SimplifiedMSM:
-                def __init__(self, n_states, transitions_list):
-                    self.nstates = n_states
-                    self.nstates_full = n_states
-                    self.reversible = False
-                    self.sparse = False
-                    self.active_set = np.arange(n_states)
-                    self._transitions = transitions_list
-
-                def eigenvalues(self):
-                    # Simple exponential decay eigenvalues
-                    eigs = np.exp(-np.arange(min(10, self.nstates)) * 0.5)
-                    eigs[0] = 1.0  # Stationary eigenvalue
-                    return eigs[: self.nstates] if self.nstates < 10 else eigs
-
-                def timescales(self):
-                    eigs = self.eigenvalues()[1:]  # Exclude stationary
-                    return -1.0 / np.log(np.maximum(eigs, 1e-10))
-
-                @property
-                def stationary_distribution(self):
-                    # Uniform distribution as approximation
-                    return np.ones(self.nstates) / self.nstates
-
-                @property
-                def transition_matrix(self):
-                    # Build empirical transition matrix
-                    T = np.zeros((self.nstates, self.nstates))
-
-                    # Count transitions
-                    for from_state, to_state in self._transitions:
-                        if from_state < self.nstates and to_state < self.nstates:
-                            T[from_state, to_state] += 1
-
-                    # Normalize rows (add small diagonal for stability)
-                    row_sums = T.sum(axis=1)
-                    for i in range(self.nstates):
-                        if row_sums[i] > 0:
-                            T[i] /= row_sums[i]
-                        else:
-                            T[i, i] = 1.0  # Self-transition if no data
-
-                    return T
-
-            simplified_model = SimplifiedMSM(n_states, transitions)
-            print(
-                f"  Created simplified model with {n_states} states and {len(transitions)} transitions"
-            )
-
-            return simplified_model, np.array([1, 3, 5, 7, 9]), [np.array([10.0, 5.0, 2.0])]
+        return msm_model, lag_times, timescales
 
     def _analyze_msm_kinetics(self, msm_model, discrete_trajectory: np.ndarray) -> dict[str, Any]:
         """Analyze kinetic properties of the MSM"""
