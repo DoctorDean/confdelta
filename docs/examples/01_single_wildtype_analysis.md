@@ -26,7 +26,7 @@ data/
 
 ### Basic Analysis
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Baseline \
@@ -38,7 +38,7 @@ md-compare single \
 
 ### Advanced Analysis with Multiple Interaction Types
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Complete \
@@ -52,7 +52,7 @@ md-compare single \
 
 ### Dynamic Analysis with DCCM and PCA
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Dynamics \
@@ -67,7 +67,7 @@ md-compare single \
 
 ### Complete Analysis with Energy Landscape
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Complete \
@@ -85,7 +85,7 @@ md-compare single \
 
 ### Advanced Network Analysis with Allosteric Pathways
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Network \
@@ -99,7 +99,7 @@ md-compare single \
 
 ### Comprehensive Analysis (All Features)
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Full \
@@ -119,7 +119,7 @@ md-compare single \
 
 ### High-Resolution Energy Landscape
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_HighRes \
@@ -132,7 +132,7 @@ md-compare single \
 
 ### Analysis with Custom Selections
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Protein_Only \
@@ -510,25 +510,25 @@ print(f"Percentage of conformational space: {n_stable_points/landscape.size*100:
 **Large network timeout:**
 ```bash
 # Reduce network size with higher threshold
-md-compare single ... --threshold 0.3 --timeout 300
+confdelta single ... --threshold 0.3 --timeout 300
 ```
 
 **Memory issues with dynamic analysis:**
 ```bash
 # Disable DCCM/PCA for large systems
-md-compare single ... --no-dccm --no-pca
+confdelta single ... --no-dccm --no-pca
 
 # Or use fewer PCA components
-md-compare single ... --pca-components 5
+confdelta single ... --pca-components 5
 ```
 
 **DCCM computation slow:**
 ```bash
 # Use backbone atoms only
-md-compare single ... --dccm-selection "backbone"
+confdelta single ... --dccm-selection "backbone"
 
 # Or CA atoms from specific region
-md-compare single ... --dccm-selection "name CA and resid 20-80"
+confdelta single ... --dccm-selection "name CA and resid 20-80"
 ```
 
 **Chain detection problems:**
@@ -547,49 +547,49 @@ md-compare single ... --dccm-selection "name CA and resid 20-80"
 **Energy landscape computation slow:**
 ```bash
 # Reduce resolution for faster computation
-md-compare single ... --landscape-bins 30
+confdelta single ... --landscape-bins 30
 
 # Skip smoothing
-md-compare single ... --landscape-sigma 0
+confdelta single ... --landscape-sigma 0
 
 # Disable landscape for speed
-md-compare single ... --no-landscape
+confdelta single ... --no-landscape
 ```
 
 **Energy landscape shows artifacts:**
 ```bash
 # Increase smoothing
-md-compare single ... --landscape-sigma 2.0
+confdelta single ... --landscape-sigma 2.0
 
 # More bins for better resolution
-md-compare single ... --landscape-bins 70
+confdelta single ... --landscape-bins 70
 
 # Check temperature setting
-md-compare single ... --landscape-temp 310
+confdelta single ... --landscape-temp 310
 ```
 
 **Community detection fails:**
 ```bash
 # Try different method
-md-compare single ... --community-method louvain
+confdelta single ... --community-method louvain
 
 # Skip if problematic
-md-compare single ... --no-communities
+confdelta single ... --no-communities
 ```
 
 **Allosteric analysis slow:**
 ```bash
 # Specify fewer sources/targets
-md-compare single ... --allosteric-sources A_50 B_50 --allosteric-targets A_25 B_25
+confdelta single ... --allosteric-sources A_50 B_50 --allosteric-targets A_25 B_25
 
 # Skip if not needed
-md-compare single ... --no-allosteric
+confdelta single ... --no-allosteric
 ```
 
 **Memory issues with advanced analysis:**
 ```bash
 # Disable resource-intensive components
-md-compare single ... --no-paths --no-allosteric --community-method louvain
+confdelta single ... --no-paths --no-allosteric --community-method louvain
 ```
 
 This baseline analysis establishes the foundation for understanding how mutations and different conditions affect the HIV protease network structure and dynamics.

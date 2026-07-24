@@ -1,11 +1,77 @@
 # Changelog
 
-All notable changes to MD-Compare will be documented in this file.
+All notable changes to confdelta will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Project lineage.** confdelta continues **MD-Compare**, which was previously
+> versioned to 1.5.0. The version was reset to 0.1.0 at the rename because the
+> public API is being rebuilt and 1.5.0 overstated the maturity of the package.
+> Entries below `## [0.1.0]` are the MD-Compare history, retained verbatim; they
+> refer to the old package name and import path (`mdcompare`).
+
 ## [Unreleased]
+
+### Changed
+- **BREAKING: the package was renamed from `md-compare` to `confdelta`.**
+  The import path is now `import confdelta` (was `import mdcompare`) and the
+  console script is `confdelta` (was `md-compare` / `mdcompare`). `mdelta`,
+  the originally proposed name, was already taken on PyPI, and `confdiff`
+  collided with `bytedance/ConfDiff`, a protein conformation *generation*
+  model in the same domain. See `DECISIONS.md` D-002.
+- **BREAKING: version reset from 1.5.0 to 0.1.0.** See the lineage note above.
+- **BREAKING: PyEMMA support removed.** deeptime, its actively maintained
+  successor by the same authors, is now the only MSM backend and is installed
+  via the `msm` extra. `select_backend("pyemma")` now logs a warning and
+  resolves to deeptime; `msm_backends.PYEMMA_AVAILABLE` was removed, as was
+  the `deeptime` extra (now redundant with `msm`). PyEMMA was the reason the
+  package carried a `numpy<2` ceiling and the reason the README needed a
+  three-workaround troubleshooting section.
+- **BREAKING: minimum Python raised to 3.10.** Python 3.8 (EOL October 2024)
+  and 3.9 are no longer supported. CI now tests 3.10, 3.11, 3.12 and 3.13.
+- The `numpy<2.0` ceiling was removed; numpy 2.x is now supported.
+- `scipy>=1.11` is now a hard floor. `scipy.stats.false_discovery_control`
+  (added in 1.11) will provide Benjamini-Hochberg and Benjamini-Yekutieli
+  correction, which is why confdelta needs no `statsmodels` runtime
+  dependency. See `DECISIONS.md` D-006.
+- Dependency floors raised off end-of-life versions: matplotlib >= 3.6,
+  seaborn >= 0.12, pandas >= 1.5, scikit-learn >= 1.1, numpy >= 1.23.
+- `AnalysisConfig.msm_backend` still accepts `"auto"`, but the only backend
+  it can resolve to is `"deeptime"`.
+- Default output directory renamed from `md_compare_results` to
+  `confdelta_results`.
+- `get_version_info()` now returns the key `confdelta_version` (was
+  `md_compare_version`).
+- Package metadata modernised: SPDX `license = "MIT"` with `license-files`,
+  `Development Status :: 3 - Alpha` (was 4 - Beta), `Typing :: Typed`, a
+  comparison-first description and keywords, and a single source of truth for
+  the version (`confdelta._version.__version__`, read by setuptools' dynamic
+  version support).
+- `scikit-learn` is no longer duplicated between the core dependencies and the
+  `ml` extra.
+- Reports that stamped a hardcoded software version (`MD-Compare v1.4.0` in
+  analysis summaries, `MD-Compare v1.5.0` in the differential HTML report) now
+  interpolate the real package version.
+
+### Added
+- `confdelta/py.typed` marker, so downstream type checkers use the package's
+  annotations.
+- `AUDIT.md` -- the Phase 0 clean-room audit of the v1.5.0 package.
+- `DECISIONS.md` -- running design-rationale log.
+- `IDEAS.md` -- parking lot for out-of-scope ideas.
+- CI: a **core-only install job** that installs the package with no extras and
+  asserts that no optional dependency is present, that the package imports,
+  that the CLI runs, and that the test suite passes with MSM tests skipping.
+- CI: `mypy` now runs in the lint job.
+
+### Removed
+- The README's "Troubleshooting" section. The core install now works with a
+  plain `pip install` on Python 3.10-3.13, with no conda environment and no
+  workarounds, so the section documented problems that no longer exist.
+- The conda installation path from the README, for the same reason.
+
+## [Historical -- MD-Compare]
 
 ### Added
 - Pluggable MSM backend (`mdcompare.msm_backends`) supporting both PyEMMA

@@ -1,11 +1,11 @@
-# MD-Compare v1.5.0: Comprehensive Protein Dynamics Analysis Platform
+# confdelta: statistical comparison of protein conformational ensembles
 
-![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10--3.13-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Version](https://img.shields.io/badge/version-1.5.0-orange.svg)
+![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-**MD-Compare** is a comprehensive toolkit for analyzing molecular dynamics simulations with advanced network analysis, conformational dynamics, and kinetic modeling capabilities. Originally designed for HIV protease research, it provides publication-ready insights into protein dynamics, allosteric mechanisms, and drug resistance pathways.
+**confdelta** is a comprehensive toolkit for analyzing molecular dynamics simulations with advanced network analysis, conformational dynamics, and kinetic modeling capabilities. Originally designed for HIV protease research, it provides publication-ready insights into protein dynamics, allosteric mechanisms, and drug resistance pathways.
 
 ## **Key Features**
 
@@ -21,7 +21,7 @@
 - **Community Detection**: Leiden, Louvain, Spectral, Hierarchical clustering
 - **Centrality Analysis**: Betweenness, closeness, eigenvector, degree centrality
 - **Network Robustness**: Attack tolerance and vulnerability assessment
-- **Kinetic Modeling**: PyEMMA integration for MSM analysis
+- **Kinetic Modeling**: deeptime integration for MSM analysis
 - **Statistical Validation**: Z-score significance testing and cross-validation
 
 ### **Publication-Ready Output**
@@ -35,46 +35,29 @@
 
 ### **Installation**
 
-MD-Compare is an installable Python package. Once published it will be
-available from PyPI; until then, install from a local clone.
-
-#### **Option 1: pip (Recommended)**
 ```bash
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-
-# Core install
-pip install .
-
-# Or with optional features:
-pip install ".[msm]"               # + PyEMMA (Markov State Models)
-pip install ".[leiden]"            # + Leiden community detection
-pip install ".[all]"               # + all optional features
-pip install ".[dev]"               # + test/lint/build tooling
+pip install confdelta
 ```
 
-#### **Option 2: Conda (for the heavier optional dependencies)**
+Optional extras:
+
 ```bash
-# Create an environment (Python 3.8-3.12 supported)
-conda create -n mdcompare python=3.10
-conda activate mdcompare
-
-# PyEMMA / igraph / leidenalg install most reliably from conda-forge
-conda install -c conda-forge pyemma python-igraph leidenalg mdanalysis
-
-# Then install MD-Compare itself
-pip install .
+pip install "confdelta[msm]"       # + deeptime (Markov State Models)
+pip install "confdelta[leiden]"    # + Leiden community detection
+pip install "confdelta[all]"       # + all optional features
 ```
 
-After installation the `md-compare` command is on your PATH; you can also
-run the tool as `python -m mdcompare`.
+Requires Python 3.10-3.13. No conda environment is needed; the core install
+has no compiled optional dependencies.
+
+After installation the `confdelta` command is on your PATH; you can also
+run the tool as `python -m confdelta`.
 
 ### **Basic Usage**
 
 #### **Complete Analysis (Network + Dynamics + Kinetics)**
 ```bash
-md-compare single \
+confdelta single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n comprehensive_analysis \
@@ -89,7 +72,7 @@ md-compare single \
 
 #### **Network Analysis Only**
 ```bash
-md-compare single \
+confdelta single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n network_analysis \
@@ -99,7 +82,7 @@ md-compare single \
 
 #### **Kinetic Modeling Focus**
 ```bash
-md-compare single \
+confdelta single \
   -t protein.pdb \
   -x trajectory.xtc \
   -n kinetic_analysis \
@@ -116,7 +99,7 @@ md-compare single \
 #### **1. Data Preparation**
 ```bash
 # Ensure trajectory is centered and aligned
-# MD-Compare handles most trajectory formats via MDAnalysis
+# confdelta handles most trajectory formats via MDAnalysis
 # Supported: .xtc, .dcd, .trr, .nc, .dtr (Desmond), .pdb
 ```
 
@@ -181,7 +164,7 @@ md-compare single \
 - **Energy Landscapes**: Free energy surfaces from PC1/PC2 projections
 - **Motion Mode Analysis**: Collective motions and conformational transitions
 
-### **Kinetic Modeling (PyEMMA Integration)**
+### **Kinetic Modeling (deeptime Integration)**
 - **Markov State Models**: Microstate networks and transition probabilities
 - **Implied Timescales**: Process separation and kinetic hierarchy
 - **Metastable States**: Long-lived conformational macrostates (PCCA+)
@@ -398,35 +381,7 @@ msm_results/
 # HPC/cluster options
 --batch-mode                        # Disable interactive features
 --no-display                        # Disable GUI components
---scratch-dir /tmp/mdcompare        # Temporary directory
-```
-
-##  **Troubleshooting**
-
-### **PyEMMA Installation Problems**
-```bash
-# Solution 1: Use conda-forge
-conda install -c conda-forge pyemma
-
-# Solution 2: Use pre-built wheels
-pip install --only-binary=all pyemma
-
-# Solution 3: Use Python 3.8-3.10
-pyenv install 3.10.12
-pyenv local 3.10.12
-pip install pyemma
-```
-
-### **Memory Issues with Large Systems**
-```bash
-# Reduce memory usage
-md-compare single \
-  -t large_protein.pdb \
-  -x large_trajectory.xtc \
-  -n memory_efficient \
-  --msm-stride 5 \
-  --msm-clusters 50 \
-  --contact-selection "name CA"
+--scratch-dir /tmp/confdelta        # Temporary directory
 ```
 
 ##  **License**
@@ -435,27 +390,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ##  **Version History**
 
-### **v1.5.0 (Current)**
-- **Differential Analysis Framework**: Full simulation-vs-simulation comparison
-- **Installable Package**: `src/` layout, `pyproject.toml`, console scripts
-- **Statistical Comparators**: Network, dynamics, energetics, kinetics, allosteric
-
-### **v1.4.0**
-- **PyEMMA Integration**: Complete MSM analysis framework
-- **Enhanced Visualizations**: 8-panel MSM dashboard
-- **Excel Export**: CSV files for transition matrices and kinetic data
-- **Cross-Platform Compatibility**: Windows/macOS/Linux support
-
-### **v1.3.1**
-- **Bug Fixes**: Resolved visualization and compatibility issues
-- **NetworkX Compatibility**: Support for versions 1.x-3.x
-- **Enhanced Error Handling**: Comprehensive fallback strategies
-
-### **v1.3.0** 
-- **Advanced Network Analysis**: Community detection and robustness analysis
-- **Statistical Validation**: Z-score significance testing
-- **Enhanced Visualizations**: 9-panel analysis dashboard
+confdelta is version **0.1.0**. It continues MD-Compare, which was previously
+versioned to 1.5.0; the version was reset at the rename because the public API
+is being rebuilt. The full history, including the MD-Compare releases, is in
+[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-**MD-Compare v1.5.0** - *Advancing Protein Dynamics Analysis Through Computational Innovation* 
+**confdelta 0.1.0** - continues MD-Compare; see CHANGELOG.md for the lineage.

@@ -141,7 +141,7 @@ Save this as `hiv_resistance_panel.json`
 
 ### Complete Multi-Mutant Analysis
 ```bash
-md-compare compare \
+confdelta compare \
   -c examples/hiv_resistance_panel.json \
   -o results/hiv_resistance_study \
   --timeout 900
@@ -150,14 +150,14 @@ md-compare compare \
 ### Focused Analysis on Active Site Region
 ```bash
 # Modify config file to include selection
-md-compare compare \
+confdelta compare \
   -c examples/hiv_resistance_panel_focused.json \
   -o results/hiv_active_site_study
 ```
 
 ### High-Sensitivity Comparison
 ```bash
-md-compare compare \
+confdelta compare \
   -c examples/hiv_resistance_panel.json \
   -o results/hiv_sensitive_study \
   --threshold 0.15 \

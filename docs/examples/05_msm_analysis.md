@@ -1,8 +1,8 @@
-# PyEMMA Integration Example: Markov State Model Analysis for HIV Protease
+# deeptime Integration Example: Markov State Model Analysis for HIV Protease
 
 ## Overview
 
-This example demonstrates the enhanced MD-Compare capabilities with PyEMMA integration for comprehensive Markov State Model (MSM) analysis. PyEMMA provides advanced kinetic modeling, metastable state identification, and transition pathway analysis that complements the existing network analysis.
+This example demonstrates the enhanced confdelta capabilities with deeptime integration for comprehensive Markov State Model (MSM) analysis. deeptime provides advanced kinetic modeling, metastable state identification, and transition pathway analysis that complements the existing network analysis.
 
 ## Scientific Background
 
@@ -22,21 +22,21 @@ This example demonstrates the enhanced MD-Compare capabilities with PyEMMA integ
 ## Installation Requirements
 
 ```bash
-# Install PyEMMA for MSM analysis
-pip install pyemma
+# Install deeptime for MSM analysis
+pip install deeptime
 
 # Optional: Enhanced clustering and analysis
 pip install scikit-learn matplotlib seaborn
 
 # Verify installation
-python -c "import pyemma; print(f'PyEMMA {pyemma.__version__} installed successfully')"
+python -c "import deeptime; print(f'deeptime {deeptime.__version__} installed successfully')"
 ```
 
 ## Basic MSM Analysis
 
 ### Standard MSM Analysis with Distance Features
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_MSM_Basic \
@@ -65,7 +65,7 @@ results/hiv_msm_basic/
 
 ### High-Resolution MSM for Detailed Kinetics
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_MSM_HighRes \
@@ -83,13 +83,13 @@ md-compare single \
 ### Alternative Feature Types
 ```bash
 # Coordinate-based MSM (for small systems)
-md-compare single \
+confdelta single \
   -t data/system.pdb -x data/traj.xtc -n coord_msm \
   --msm-features coordinates \
   --msm-clusters 50
 
 # Angle-based MSM (backbone dynamics)
-md-compare single \
+confdelta single \
   -t data/system.pdb -x data/traj.xtc -n angle_msm \
   --msm-features angles \
   --msm-clusters 100
@@ -99,7 +99,7 @@ md-compare single \
 
 ### Comprehensive Dynamics and Network Analysis
 ```bash
-md-compare single \
+confdelta single \
   -t data/hiv_wt_complex.pdb \
   -x data/hiv_wt_trajectory.xtc \
   -n HIV_WT_Complete \
@@ -233,37 +233,37 @@ for state, count in sorted(state_centralities.items(), key=lambda x: x[1], rever
 **1. Too Few Connected States**
 ```bash
 # Increase connectivity threshold
-md-compare single ... --msm-clusters 50  # Fewer clusters
+confdelta single ... --msm-clusters 50  # Fewer clusters
 
 # Or reduce lag time
-md-compare single ... --msm-lag-time 5
+confdelta single ... --msm-lag-time 5
 ```
 
 **2. Poor Timescale Separation**
 ```bash
 # Increase lag time
-md-compare single ... --msm-lag-time 20
+confdelta single ... --msm-lag-time 20
 
 # Try different features
-md-compare single ... --msm-features coordinates
+confdelta single ... --msm-features coordinates
 ```
 
 **3. MSM Construction Fails**
 ```bash
 # Reduce system complexity
-md-compare single ... --msm-stride 2  # Use fewer frames
+confdelta single ... --msm-stride 2  # Use fewer frames
 
 # Simpler clustering
-md-compare single ... --msm-clustering regular_space
+confdelta single ... --msm-clustering regular_space
 ```
 
 **4. Memory Issues with Large Trajectories**
 ```bash
 # Use stride to reduce data
-md-compare single ... --msm-stride 5
+confdelta single ... --msm-stride 5
 
 # Fewer clusters
-md-compare single ... --msm-clusters 50
+confdelta single ... --msm-clusters 50
 ```
 
 ## Scientific Applications
@@ -280,7 +280,7 @@ md-compare single ... --msm-clusters 50
 3. **Resistance Evolution**: How mutations alter kinetic networks
 4. **Dimer Cooperativity**: Cross-chain communication timescales
 
-## Advanced PyEMMA Features
+## Advanced deeptime Features
 
 ### Custom Feature Selection
 ```python
@@ -302,12 +302,12 @@ feature_pairs = [
 ```bash
 # Compare different lag times
 for lag in 5 10 15 20; do
-    md-compare single ... --msm-lag-time $lag -n msm_lag_${lag}
+    confdelta single ... --msm-lag-time $lag -n msm_lag_${lag}
 done
 
 # Compare clustering methods
 for method in kmeans regular_space minibatch_kmeans; do
-    md-compare single ... --msm-clustering $method -n msm_${method}
+    confdelta single ... --msm-clustering $method -n msm_${method}
 done
 ```
 
@@ -343,4 +343,4 @@ done
 3. **Mutation analysis**: Kinetic network perturbation studies
 4. **Multi-scale modeling**: MSM-informed coarse-graining
 
-This PyEMMA integration transforms MD-Compare into a comprehensive platform for both structural network analysis and kinetic modeling, providing unprecedented insights into protein dynamics and function!
+This deeptime integration transforms confdelta into a comprehensive platform for both structural network analysis and kinetic modeling, providing unprecedented insights into protein dynamics and function!

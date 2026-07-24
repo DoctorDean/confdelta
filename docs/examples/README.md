@@ -1,6 +1,6 @@
-# MD-Compare Examples: HIV Protease Drug Resistance Analysis
+# confdelta Examples: HIV Protease Drug Resistance Analysis
 
-This directory contains comprehensive examples demonstrating how to use MD-Compare for studying HIV protease drug resistance mechanisms through network analysis. These examples progress from basic single-simulation analysis to advanced multi-mutant comparative studies.
+This directory contains comprehensive examples demonstrating how to use confdelta for studying HIV protease drug resistance mechanisms through network analysis. These examples progress from basic single-simulation analysis to advanced multi-mutant comparative studies.
 
 ## Example Overview
 
@@ -9,11 +9,11 @@ This directory contains comprehensive examples demonstrating how to use MD-Compa
 
 **Purpose**: Establish baseline network properties for wild-type HIV protease
 **Use Case**: Understanding normal protein dynamics and communication networks
-**Key Learning**: Basic MD-Compare usage, output interpretation, network visualization
+**Key Learning**: Basic confdelta usage, output interpretation, network visualization
 
 **Command**:
 ```bash
-md-compare single -t hiv_wt_complex.pdb -x hiv_wt_trajectory.xtc -n HIV_WT_Baseline
+confdelta single -t hiv_wt_complex.pdb -x hiv_wt_trajectory.xtc -n HIV_WT_Baseline
 ```
 
 ---
@@ -27,7 +27,7 @@ md-compare single -t hiv_wt_complex.pdb -x hiv_wt_trajectory.xtc -n HIV_WT_Basel
 
 **Command**:
 ```bash
-md-compare diff -t1 hiv_wt.pdb -x1 wt.xtc -n1 WT -t2 hiv_l90m.pdb -x2 mut.xtc -n2 L90M
+confdelta diff -t1 hiv_wt.pdb -x1 wt.xtc -n1 WT -t2 hiv_l90m.pdb -x2 mut.xtc -n2 L90M
 ```
 
 ---
@@ -41,7 +41,7 @@ md-compare diff -t1 hiv_wt.pdb -x1 wt.xtc -n1 WT -t2 hiv_l90m.pdb -x2 mut.xtc -n
 
 **Command**:
 ```bash
-md-compare differential -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
+confdelta differential -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
                         -t2 hiv_v82a.pdb -x2 v82a.xtc -n2 "V82A_Mutant" \
                         -o hiv_resistance_analysis --statistical-tests --publication-figures
 ```
@@ -64,7 +64,7 @@ md-compare differential -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
 **Configuration**: `hiv_resistance_panel.json`
 **Command**:
 ```bash
-md-compare compare -c hiv_resistance_panel.json -o hiv_resistance_study
+confdelta compare -c hiv_resistance_panel.json -o hiv_resistance_study
 ```
 
 ---
@@ -187,7 +187,7 @@ data/
 - **Time**: 10 minutes - 2 hours depending on analysis complexity
 
 ### **Software Dependencies**
-- MD-Compare toolkit v1.5.0+ (installed)
+- confdelta toolkit v1.5.0+ (installed)
 - Python 3.8+ with scientific libraries
 - Optional: PyMOL, Cytoscape for visualization
 - Optional: Jupyter notebooks for interactive analysis
@@ -202,7 +202,7 @@ data/
 5. **Quantitative Changes**: Statistical significance of all molecular changes
 
 ### **Methodological Skills**
-1. **MD-Compare Proficiency**: Complete toolkit usage including v1.5.0 features
+1. **confdelta Proficiency**: Complete toolkit usage including v1.5.0 features
 2. **Network Analysis**: Interpretation of complex networks
 3. **Statistical Analysis**: Significance testing and validation
 4. **Scientific Visualization**: Publication-quality figures
@@ -219,7 +219,7 @@ data/
 
 ### **Research Pipeline Integration**
 ```
-1. MD Simulations → 2. MD-Compare Analysis → 3. Statistical Analysis → 4. Hypothesis Generation
+1. MD Simulations → 2. confdelta Analysis → 3. Statistical Analysis → 4. Hypothesis Generation
                            ↓                        ↓                    ↓
 7. Publication ← 6. Manuscript Prep ← 5. Validation Studies ← Experimental Design
 ```
@@ -250,7 +250,7 @@ After completing these examples, you will be able to:
 
 ### **Recommended Learning Path**
 
-1. **Start with Example 1** - Learn basic MD-Compare usage
+1. **Start with Example 1** - Learn basic confdelta usage
 2. **Try Example 2** - Understand basic differential analysis
 3. **Use Comprehensive Example** - Experience full v1.5.0 capabilities
 4. **Advance to Example 3** - Handle multiple simulations
@@ -259,7 +259,7 @@ After completing these examples, you will be able to:
 ### **Quick Start for Comprehensive Analysis**
 ```bash
 # Basic comprehensive differential analysis
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a.xtc -n2 "V82A_Mutant" \
   -o results
@@ -274,7 +274,7 @@ md-compare differential \
 - Allosteric regulation principles
 
 ### **Technical Documentation**
-- MD-Compare v1.5.0 user guide and API reference
+- confdelta v1.5.0 user guide and API reference
 - NetworkX documentation for graph analysis
 - MDAnalysis tutorials for trajectory processing
 - Statistical analysis best practices
@@ -285,4 +285,4 @@ md-compare differential \
 - Python matplotlib/seaborn for data visualization
 - VMD for trajectory analysis
 
-These examples provide a complete learning path from basic network analysis to advanced resistance mechanism studies, preparing researchers to apply MD-Compare to their own protein systems and research questions.
+These examples provide a complete learning path from basic network analysis to advanced resistance mechanism studies, preparing researchers to apply confdelta to their own protein systems and research questions.

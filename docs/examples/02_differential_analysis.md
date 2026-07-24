@@ -1,6 +1,6 @@
 # Comprehensive Differential Analysis Example
 
-This example demonstrates MD-Compare's v1.5.0 comprehensive differential analysis capabilities using HIV protease drug resistance as a case study. It shows how to perform quantitative simulation vs simulation comparison across all molecular dynamics dimensions.
+This example demonstrates confdelta's v1.5.0 comprehensive differential analysis capabilities using HIV protease drug resistance as a case study. It shows how to perform quantitative simulation vs simulation comparison across all molecular dynamics dimensions.
 
 ## Overview
 
@@ -17,7 +17,7 @@ This example demonstrates MD-Compare's v1.5.0 comprehensive differential analysi
 
 ### Basic Comprehensive Differential Analysis
 ```bash
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt_trajectory.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a_trajectory.xtc -n2 "V82A_Mutant" \
   -o hiv_resistance_analysis \
@@ -27,7 +27,7 @@ md-compare differential \
 
 ### Research-Grade Analysis with Statistical Testing
 ```bash
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt_trajectory.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a_trajectory.xtc -n2 "V82A_Mutant" \
   -o hiv_wt_vs_v82a_comprehensive \
@@ -190,7 +190,7 @@ print(f"Statistically significant changes: {len(significant)}")
 ### Focus on Specific Regions
 ```bash
 # Analyze only flap and active site regions
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt_trajectory.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a_trajectory.xtc -n2 "V82A_Mutant" \
   -o hiv_focused_analysis \
@@ -201,7 +201,7 @@ md-compare differential \
 ### High-Sensitivity Analysis
 ```bash
 # Lower thresholds for detecting subtle changes
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt_trajectory.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a_trajectory.xtc -n2 "V82A_Mutant" \
   -o hiv_sensitive_analysis \
@@ -213,7 +213,7 @@ md-compare differential \
 ### Skip Computationally Expensive Analyses
 ```bash
 # Focus on network and dynamics only
-md-compare differential \
+confdelta differential \
   -t1 hiv_wt.pdb -x1 wt_trajectory.xtc -n1 "Wild_Type" \
   -t2 hiv_v82a.pdb -x2 v82a_trajectory.xtc -n2 "V82A_Mutant" \
   -o hiv_fast_analysis \

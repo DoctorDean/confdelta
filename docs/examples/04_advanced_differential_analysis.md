@@ -37,7 +37,7 @@ data/
 
 ### High-Resolution Differential Detection
 ```bash
-md-compare diff \
+confdelta diff \
   -t1 data/hiv_wt_complex.pdb \
   -x1 data/hiv_wt_trajectory.xtc \
   -n1 HIV_WT \
@@ -56,7 +56,7 @@ md-compare diff \
 ### Multi-Timescale Analysis
 ```bash
 # Short timescale (first 20 ns)
-md-compare diff \
+confdelta diff \
   -t1 data/hiv_wt_complex.pdb \
   -x1 data/hiv_wt_trajectory_0-20ns.xtc \
   -n1 HIV_WT_Short \
@@ -67,7 +67,7 @@ md-compare diff \
   --diff-threshold 0.08
 
 # Long timescale (final 20 ns)  
-md-compare diff \
+confdelta diff \
   -t1 data/hiv_wt_complex.pdb \
   -x1 data/hiv_wt_trajectory_80-100ns.xtc \
   -n1 HIV_WT_Long \
@@ -277,8 +277,8 @@ def analyze_temporal_networks(trajectory_segments):
     for i, (wt_seg, mut_seg) in enumerate(trajectory_segments):
         time_points.append(i * 10)  # Assuming 10 ns segments
         
-        # Run MD-Compare on each segment
-        # This would involve multiple md-compare calls with time-windowed trajectories
+        # Run confdelta on each segment
+        # This would involve multiple confdelta calls with time-windowed trajectories
         
         # Extract properties (pseudo-code)
         wt_density = analyze_segment(wt_seg)['density']

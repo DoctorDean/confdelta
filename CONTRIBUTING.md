@@ -1,4 +1,4 @@
-# Contributing to MD-Compare
+# Contributing to confdelta
 
 We welcome contributions to improve this molecular dynamics comparison toolkit! This document provides guidelines for contributing.
 
@@ -32,7 +32,7 @@ Before creating an issue, please:
    pytest tests/
    
    # Test CLI functionality
-   md-compare --help
+   confdelta --help
    
    # Check code style
    flake8 your_new_file.py
@@ -55,8 +55,8 @@ Before creating an issue, please:
 ### Environment Setup
 ```bash
 # Clone your fork
-git clone https://github.com/DoctorDean/md-compare.git
-cd md-compare
+git clone https://github.com/DoctorDean/confdelta.git
+cd confdelta
 
 # Create development environment (Python 3.8-3.12 supported)
 python -m venv .venv
@@ -178,7 +178,7 @@ Include this information:
 - Python version: [e.g., 3.9.7]
 - MDAnalysis version: [e.g., 2.4.0]
 - NetworkX version: [e.g., 2.8.0]
-- MD-Compare version: [e.g., 1.0.0]
+- confdelta version: [e.g., 1.0.0]
 
 **System Information:**
 - Protein system: [e.g., 250 residues, 4000 atoms, multi-chain]
@@ -187,7 +187,7 @@ Include this information:
 
 **Command Used:**
 ```bash
-md-compare single -t system.pdb -x traj.xtc -n test --threshold 0.2
+confdelta single -t system.pdb -x traj.xtc -n test --threshold 0.2
 ```
 
 **Error Message:**
