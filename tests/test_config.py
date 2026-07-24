@@ -191,3 +191,33 @@ class TestDocumentationMatchesCode:
         real = {f.name for f in dataclasses.fields(DifferentialConfig)}
         undocumented = real - self._documented("comparison")
         assert undocumented == set(), f"implemented but undocumented: {sorted(undocumented)}"
+
+
+class TestExampleIsComplete:
+    """The generated template must list every option, including None defaults."""
+
+    def test_every_analysis_option_appears(self):
+        import dataclasses
+
+        from confdelta.core import AnalysisConfig
+
+        expected = {f.name for f in dataclasses.fields(AnalysisConfig)}
+        assert set(example_config()["analysis"]) == expected
+
+    def test_every_comparison_option_appears(self):
+        import dataclasses
+
+        from confdelta.differential import DifferentialConfig
+
+        expected = {f.name for f in dataclasses.fields(DifferentialConfig)}
+        assert set(example_config()["comparison"]) == expected
+
+    def test_null_defaults_round_trip(self, tmp_path):
+        """JSON null must load back as the dataclass default, not crash."""
+        path = write_example_config(tmp_path / "example.json")
+        analysis, _ = load_config(path)
+        # allosteric endpoints default to None and are chosen automatically.
+        assert analysis.allosteric_source_nodes is None
+        # __post_init__ fills these even when the file says null.
+        assert isinstance(analysis.cutoffs, dict)
+        assert isinstance(analysis.interaction_types, list)

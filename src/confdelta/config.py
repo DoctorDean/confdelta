@@ -149,13 +149,15 @@ def example_config() -> dict[str, Any]:
 
     Generated from the dataclasses rather than hand-maintained, so it cannot
     drift out of sync with the code or advertise options that do not exist.
+
+    Options whose default is ``None`` are included as JSON ``null`` rather than
+    omitted. ``null`` round-trips back to the same default, and including them
+    is what makes the generated file a complete catalogue -- omitting them left
+    users unable to discover options such as ``allosteric_source_nodes`` from
+    the template the CLI describes as containing every option.
     """
     return {
-        _ANALYSIS_SECTION: {
-            name: value
-            for name, value in dataclasses.asdict(AnalysisConfig()).items()
-            if value is not None
-        },
+        _ANALYSIS_SECTION: dataclasses.asdict(AnalysisConfig()),
         _COMPARISON_SECTION: dataclasses.asdict(DifferentialConfig()),
     }
 
