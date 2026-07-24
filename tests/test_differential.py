@@ -26,18 +26,35 @@ class TestDifferentialConfig:
     def test_defaults(self):
         cfg = DifferentialConfig()
         assert cfg.compare_networks is True
-        assert cfg.significance_threshold == pytest.approx(0.05)
-        assert cfg.multiple_comparison_correction in {"fdr_bh", "bonferroni", "none"}
+        assert cfg.correlation_change_threshold == pytest.approx(0.2)
 
     def test_custom_values(self):
         cfg = DifferentialConfig(
             compare_kinetics=False,
-            bootstrap_iterations=200,
             correlation_change_threshold=0.15,
         )
         assert cfg.compare_kinetics is False
-        assert cfg.bootstrap_iterations == 200
         assert cfg.correlation_change_threshold == pytest.approx(0.15)
+
+    @pytest.mark.parametrize(
+        "removed",
+        [
+            "perform_statistical_tests",
+            "significance_threshold",
+            "multiple_comparison_correction",
+            "bootstrap_iterations",
+            "permutation_iterations",
+        ],
+    )
+    def test_statistics_options_are_not_advertised(self, removed):
+        """Options promising statistics that do not exist must stay removed.
+
+        Each of these was settable and never read by any code path. They will
+        return with the statistical core, not before.
+        """
+        assert not hasattr(DifferentialConfig(), removed)
+        with pytest.raises(TypeError):
+            DifferentialConfig(**{removed: 1})
 
 
 class TestDifferentialAnalyzer:
@@ -66,7 +83,7 @@ class TestNetworkComparator:
         return type("M", (), {"network": graph})()
 
     def test_identical_networks_have_no_changes(self, small_graph):
-        comparator = NetworkComparator(DifferentialConfig(perform_statistical_tests=False))
+        comparator = NetworkComparator(DifferentialConfig())
         m = self._metrics_with_graph(small_graph)
         result = comparator.compare_networks(m, m)
         assert result.nodes_added == []
@@ -74,7 +91,7 @@ class TestNetworkComparator:
 
     def test_added_and_removed_nodes_detected(self, small_graph):
 
-        comparator = NetworkComparator(DifferentialConfig(perform_statistical_tests=False))
+        comparator = NetworkComparator(DifferentialConfig())
         modified = small_graph.copy()
         modified.add_node("C_1")
         modified.remove_node("A_1")

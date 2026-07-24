@@ -34,13 +34,13 @@ class TestLoadConfig:
                 tmp_path,
                 {
                     "analysis": {"threshold": 0.33, "pca_components": 7},
-                    "comparison": {"significance_threshold": 0.01},
+                    "comparison": {"figure_dpi": 150},
                 },
             )
         )
         assert analysis.threshold == pytest.approx(0.33)
         assert analysis.pca_components == 7
-        assert comparison.significance_threshold == pytest.approx(0.01)
+        assert comparison.figure_dpi == 150
 
     def test_omitted_options_keep_defaults(self, tmp_path):
         from confdelta.core import AnalysisConfig

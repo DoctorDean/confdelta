@@ -28,37 +28,43 @@ logger = logging.getLogger("confdelta")
 
 @dataclass
 class DifferentialConfig:
-    """Configuration for differential analysis between simulations"""
+    """Configuration for differential analysis between two ensembles.
 
-    # Comparison focus areas
+    Note on what is absent
+    ----------------------
+    This dataclass previously carried ``perform_statistical_tests``,
+    ``significance_threshold``, ``multiple_comparison_correction``,
+    ``bootstrap_iterations`` and ``permutation_iterations``. None of them was
+    ever read by any code path: no bootstrap, no permutation test and no
+    multiple-testing correction existed. They advertised, in the configuration
+    surface, capabilities the package did not have. They will return when the
+    statistical core is implemented, and not before.
+
+    ``create_difference_plots``, ``create_pdf_summary``, ``export_excel_workbook``
+    and ``energy_change_threshold`` were removed for the same reason: declared,
+    never consulted.
+    """
+
+    # Which comparisons to run.
     compare_networks: bool = True
     compare_dynamics: bool = True
     compare_energetics: bool = True
     compare_kinetics: bool = True
     compare_allosteric: bool = True
 
-    # Statistical analysis options
-    perform_statistical_tests: bool = True
-    significance_threshold: float = 0.05
-    multiple_comparison_correction: str = "fdr_bh"  # fdr_bh, bonferroni, none
-    bootstrap_iterations: int = 1000
-    permutation_iterations: int = 1000
-
-    # Visualization options
-    create_difference_plots: bool = True
+    # Visualisation.
     create_publication_figures: bool = False
     figure_dpi: int = 300
     heatmap_colormap: str = "RdBu_r"
 
-    # Output options
+    # Output.
     create_html_report: bool = True
-    create_pdf_summary: bool = False
-    export_excel_workbook: bool = True
 
-    # Analysis thresholds
-    correlation_change_threshold: float = 0.2  # Minimum |Δρ| to consider significant
+    # Magnitude thresholds for what counts as a reportable change. These are
+    # filters on effect size only; nothing here implies statistical
+    # significance.
+    correlation_change_threshold: float = 0.2  # Minimum |Δρ| to report a residue pair
     efficiency_change_threshold: float = 0.1  # Minimum communication efficiency change
-    energy_change_threshold: float = 2.0  # Minimum energy change (kT)
     centrality_change_threshold: float = 0.1  # Minimum centrality change
 
 
