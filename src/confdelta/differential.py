@@ -262,114 +262,94 @@ class DifferentialAnalyzer:
         sim2_topology: str,
         sim2_trajectory: str,
         sim2_name: str,
-        analysis_config: AnalysisConfig = None,
+        analysis_config: AnalysisConfig | None = None,
     ) -> ComprehensiveDifferentialResults:
+        """Compare two simulations given as topology/trajectory file paths.
+
+        A thin convenience wrapper over :meth:`run_ensemble_comparison`: it
+        builds an :class:`~confdelta.ensemble.Ensemble` from each pair of files
+        and delegates. All the analysis logic lives in the ensemble path, so the
+        two entry points cannot diverge.
         """
-        Perform comprehensive differential analysis between two simulations
+        from .ensemble import Ensemble, EnsembleGroup
 
-        Parameters:
-        -----------
-        sim1_topology, sim1_trajectory, sim1_name : str
-            First simulation data and identifier
-        sim2_topology, sim2_trajectory, sim2_name : str
-            Second simulation data and identifier
-        analysis_config : AnalysisConfig
-            Configuration for individual simulation analyses
-
-        Returns:
-        --------
-        ComprehensiveDifferentialResults
-            Complete differential analysis results
-        """
-        print(f"Starting differential analysis: {sim1_name} vs {sim2_name}")
-        print("=" * 60)
-
-        # Create the output tree now, immediately before anything is written.
-        self._setup_output_directories()
-
-        # Step 1: Perform individual analyses
-        print("Phase 1: Individual simulation analyses...")
-        sim1_results, sim2_results = self._run_individual_analyses(
-            sim1_topology,
-            sim1_trajectory,
-            sim1_name,
-            sim2_topology,
-            sim2_trajectory,
-            sim2_name,
-            analysis_config,
+        group1 = EnsembleGroup.single(
+            Ensemble.from_trajectory(sim1_topology, sim1_trajectory, name=sim1_name)
         )
-
-        # Step 2: Comparative analysis
-        print("Phase 2: Comparative analysis...")
-        comparison_results = self._run_comparative_analyses(sim1_results, sim2_results)
-
-        # Step 4: Generate comprehensive results object
-        print("Phase 4: Generating comprehensive results...")
-        differential_results = self._compile_comprehensive_results(
-            sim1_results, sim2_results, comparison_results, (sim1_name, sim2_name)
+        group2 = EnsembleGroup.single(
+            Ensemble.from_trajectory(sim2_topology, sim2_trajectory, name=sim2_name)
         )
+        return self.run_ensemble_comparison(group1, group2, analysis_config)
 
-        # Step 5: Create outputs and reports
-        print("Phase 5: Creating outputs and reports...")
-        self._generate_outputs(differential_results)
-
-        print("✓ Differential analysis complete!")
-        print(f"Results available in: {self.output_dir}")
-
-        return differential_results
-
-    def _run_individual_analyses(
+    def run_ensemble_comparison(
         self,
-        sim1_topology: str,
-        sim1_trajectory: str,
-        sim1_name: str,
-        sim2_topology: str,
-        sim2_trajectory: str,
-        sim2_name: str,
-        analysis_config: AnalysisConfig,
-    ) -> tuple[MDSimulation, MDSimulation]:
-        """Run complete individual analyses on both simulations"""
+        group_a: Any,
+        group_b: Any,
+        analysis_config: AnalysisConfig | None = None,
+    ) -> ComprehensiveDifferentialResults:
+        """Compare two conditions given as :class:`~confdelta.ensemble.EnsembleGroup`.
 
-        # Import the main analysis class
-        from .core import MDCompare, SimulationConfig
+        This is the source-agnostic entry point: each condition's conformations
+        may come from a trajectory, a multi-model PDB, a set of predicted
+        structures, or an in-memory array. The path-based
+        :meth:`run_differential_analysis` remains for trajectory-file callers
+        and is implemented on top of this.
 
+        Only the first replicate of each group is analysed for now. Multi-
+        replicate, replicate-as-unit-of-inference statistics are the next piece
+        of work (DECISIONS.md D-005); until then, supplying replicates is
+        accepted but only the first is used, and that is logged.
+        """
         if analysis_config is None:
             analysis_config = AnalysisConfig()
 
-        # Create individual output directories
-        sim1_output = self.subdirs["individual"] / f"{sim1_name}_results"
-        sim2_output = self.subdirs["individual"] / f"{sim2_name}_results"
+        for group in (group_a, group_b):
+            if getattr(group, "has_replicates", False):
+                logger.warning(
+                    "Condition %r has %d replicates; only the first is used until "
+                    "replicate-aware statistics are implemented.",
+                    group.label,
+                    group.n_replicates,
+                )
 
-        # Create simulation configurations
-        sim1_config = SimulationConfig(
-            name=sim1_name,
-            topology=sim1_topology,
-            trajectory=sim1_trajectory,
-            selection="protein and not name H*",
-            description="Simulation 1 for differential analysis",
+        ensemble_a = group_a[0]
+        ensemble_b = group_b[0]
+
+        print(f"Starting ensemble comparison: {group_a.label} vs {group_b.label}")
+        print("=" * 60)
+        self._setup_output_directories()
+
+        print("Phase 1: Individual analyses...")
+        sim_a = self._analyse_one(ensemble_a.to_simulation(), group_a.label, analysis_config)
+        sim_b = self._analyse_one(ensemble_b.to_simulation(), group_b.label, analysis_config)
+
+        print("Phase 2: Comparative analysis...")
+        comparison_results = self._run_comparative_analyses(sim_a, sim_b)
+
+        print("Phase 3: Generating comprehensive results...")
+        differential_results = self._compile_comprehensive_results(
+            sim_a, sim_b, comparison_results, (group_a.label, group_b.label)
         )
 
-        sim2_config = SimulationConfig(
-            name=sim2_name,
-            topology=sim2_topology,
-            trajectory=sim2_trajectory,
-            selection="protein and not name H*",
-            description="Simulation 2 for differential analysis",
-        )
+        print("Phase 4: Creating outputs and reports...")
+        self._generate_outputs(differential_results)
 
-        # Analyze simulation 1
-        print(f"  Analyzing {sim1_name}...")
-        md_compare_1 = MDCompare(analysis_config, str(sim1_output))
-        md_compare_1.add_simulation(sim1_config)
-        sim1_results = md_compare_1.run_analysis([sim1_name])[sim1_name]
+        print("✓ Comparison complete!")
+        print(f"Results available in: {self.output_dir}")
+        return differential_results
 
-        # Analyze simulation 2
-        print(f"  Analyzing {sim2_name}...")
-        md_compare_2 = MDCompare(analysis_config, str(sim2_output))
-        md_compare_2.add_simulation(sim2_config)
-        sim2_results = md_compare_2.run_analysis([sim2_name])[sim2_name]
+    def _analyse_one(
+        self, simulation: MDSimulation, label: str, analysis_config: AnalysisConfig
+    ) -> MDSimulation:
+        """Run the full single-ensemble analysis on one prepared simulation."""
+        from .core import MDCompare
 
-        return sim1_results, sim2_results
+        output = self.subdirs["individual"] / f"{label}_results"
+        print(f"  Analyzing {label}...")
+        workflow = MDCompare(analysis_config, str(output))
+        workflow.add_prepared_simulation(simulation)
+        workflow.run_analysis([simulation.name])
+        return workflow.simulations[simulation.name]
 
     def _run_comparative_analyses(self, sim1: MDSimulation, sim2: MDSimulation) -> dict[str, Any]:
         """Perform all comparative analyses"""

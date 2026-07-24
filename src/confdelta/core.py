@@ -5626,6 +5626,17 @@ class MDCompare:
 
         return success
 
+    def add_prepared_simulation(self, simulation: MDSimulation) -> None:
+        """Register an already-loaded MDSimulation, skipping file IO.
+
+        Used by the ensemble input model: ``Ensemble.to_simulation()`` returns
+        a simulation whose universe is already in memory, so there is nothing
+        to ``load()``. This is the path that lets a comparison run on a
+        multi-model PDB, a set of predicted structures, or an in-memory
+        coordinate array rather than only on trajectory files.
+        """
+        self.simulations[simulation.name] = simulation
+
     def run_analysis(self, simulation_names: list[str] = None) -> dict[str, Any]:
         """
         Run complete analysis on specified simulations
