@@ -201,3 +201,60 @@ class TestOutputHonesty:
         source = __import__("inspect").getsource(cli)
         assert "EXECUTIVE SUMMARY" not in source
         assert "executive_summary" not in source
+
+
+class TestDocumentedCommandsAreReal:
+    """Every confdelta command shown in the docs must parse.
+
+    The five example documents this replaces used 68 distinct flags, every one
+    of which had ceased to exist. These tests make that a test failure rather
+    than something a reader discovers.
+    """
+
+    @staticmethod
+    def _documented_commands():
+        """Extract `confdelta ...` invocations from fenced bash blocks only.
+
+        Restricted to fenced blocks so prose that happens to begin with the
+        word "confdelta" is not mistaken for a command.
+        """
+        import pathlib
+        import re
+        import shlex
+
+        root = pathlib.Path(__file__).resolve().parents[1]
+        sources = [root / "README.md", *(root / "docs").rglob("*.md")]
+        commands = []
+        for path in sources:
+            if not path.is_file():
+                continue
+            for block in re.findall(r"```(?:bash|sh|console)\n(.*?)```", path.read_text(), re.S):
+                # Join shell line-continuations, then drop trailing comments.
+                block = re.sub(r"\\\s*\n\s*", " ", block)
+                for line in block.splitlines():
+                    stripped = line.split("#", 1)[0].strip()
+                    if not stripped.startswith("confdelta "):
+                        continue
+                    try:
+                        commands.append((path.name, shlex.split(stripped)[1:]))
+                    except ValueError:
+                        continue
+        return commands
+
+    def test_some_commands_were_found(self):
+        assert self._documented_commands(), "no documented commands found to check"
+
+    def test_every_documented_command_parses(self, tmp_path, monkeypatch):
+        """Parse each documented command; unknown flags or subcommands exit."""
+        parser = cli.build_parser()
+        monkeypatch.chdir(tmp_path)
+
+        failures = []
+        for source, argv in self._documented_commands():
+            if not argv or argv[0].startswith("-"):
+                continue
+            try:
+                parser.parse_args(argv)
+            except SystemExit:
+                failures.append(f"{source}: confdelta {' '.join(argv)}")
+        assert failures == [], "documented commands that do not parse:\n" + "\n".join(failures)

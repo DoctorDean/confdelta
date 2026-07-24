@@ -55,99 +55,40 @@ run the tool as `python -m confdelta`.
 
 ### **Basic Usage**
 
-#### **Complete Analysis (Network + Dynamics + Kinetics)**
+Compare two ensembles:
+
 ```bash
-confdelta single \
-  -t protein.pdb \
-  -x trajectory.xtc \
-  -n comprehensive_analysis \
-  --compute-dccm \
-  --compute-pca \
-  --compute-landscape \
-  --compute-msm \
-  --community-method leiden \
-  --allosteric-sources A_50 B_50 \
-  --allosteric-targets A_25 B_25
+confdelta compare -a wt.pdb wt.xtc -b mutant.pdb mutant.xtc -o results/
 ```
 
-#### **Network Analysis Only**
+Label the conditions so the output tables read clearly:
+
 ```bash
-confdelta single \
-  -t protein.pdb \
-  -x trajectory.xtc \
-  -n network_analysis \
-  --no-dccm --no-pca --no-msm \
-  --community-method leiden
+confdelta compare \
+  -a wt.pdb wt.xtc       --a-name wild_type \
+  -b v82a.pdb v82a.xtc   --b-name V82A \
+  -o hiv_wt_vs_v82a/
 ```
 
-#### **Kinetic Modeling Focus**
+Analyse a single ensemble:
+
 ```bash
-confdelta single \
-  -t protein.pdb \
-  -x trajectory.xtc \
-  -n kinetic_analysis \
-  --compute-msm \
-  --msm-features distances \
-  --msm-clusters 150 \
-  --msm-lag-time 10 \
-  --kinetic-timescales 8 \
-  --metastable-states 6
+confdelta single -t system.pdb -x trajectory.xtc -n my_run -o results/
 ```
 
-### **Analysis Workflow Overview**
+Change any analysis option through a config file:
 
-#### **1. Data Preparation**
 ```bash
-# Ensure trajectory is centered and aligned
-# confdelta handles most trajectory formats via MDAnalysis
-# Supported: .xtc, .dcd, .trr, .nc, .dtr (Desmond), .pdb
+confdelta example-config -o study.json
+confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
 ```
 
-#### **2. Network Construction**
-```bash
-# Distance-based networks with customizable cutoffs
---cutoff-distance 4.5              # Contact distance in Angstroms
---contact-selection "protein"      # Atom selection for network
---interaction-types distance       # Network interaction types
-```
-
-#### **3. Topology Analysis**
-```bash
-# Community detection and centrality analysis
---community-method leiden          # Algorithm: leiden, louvain, spectral
---centrality-measures all          # Compute all centrality types
---network-robustness               # Assess vulnerability to attacks
-```
-
-#### **4. Dynamic Analysis**
-```bash
-# Cross-correlation and PCA
---compute-dccm                     # Dynamic cross-correlation matrix
---dccm-selection "name CA"         # Atoms for correlation analysis
---compute-pca                      # Principal component analysis
---pca-components 10                # Number of PC components
-```
-
-#### **5. Kinetic Modeling**
-```bash
-# Markov State Model construction
---compute-msm                      # Enable MSM analysis
---msm-features distances           # Feature type for clustering
---msm-clusters 100                 # Number of microstates
---msm-lag-time 10                  # Lag time (frames)
---kinetic-timescales 5             # Implied timescales to compute
---metastable-states 5              # Number of macrostates
-```
-
-#### **6. Output Generation**
-```bash
-# Comprehensive visualization and export
-# → 9-panel network dashboard
-# → 8-panel MSM analysis dashboard
-# → Excel-compatible CSV files
-# → High-resolution publication figures
-# → Detailed scientific reports
-```
+> **What confdelta reports today.** Descriptive differences only — difference
+> matrices, centrality and modularity deltas, energy-surface differences,
+> timescale ratios, pathway disruption and hotspot rank changes. There is no
+> significance testing, no effect-size estimation and no multiple-testing
+> correction yet, and the tool says so on every run. See
+> [AUDIT.md](AUDIT.md) for exactly what exists and what does not.
 
 ## **Analysis Capabilities**
 
@@ -212,177 +153,19 @@ msm_results/
 - **Protein Folding**: Pathway analysis and intermediate state characterization
 - **Stability Engineering**: Critical residue identification for rational design
 
-## ⚙️ **Configuration Options**
+## **Configuration**
 
-### **Input/Output Parameters**
+The command line carries only what a typical run needs; every other analysis
+option lives in a JSON config file.
+
 ```bash
-# Input files
--t, --topology protein.pdb         # Topology file (PDB, PSF, etc.)
--x, --trajectory traj.xtc           # Trajectory file(s) 
--n, --name analysis_name            # Analysis identifier
-
-# Output control
---output-dir ./results/             # Output directory
---save-format png pdf               # Figure formats
---no-cleanup                        # Keep intermediate files
+confdelta example-config -o study.json     # every option, at its default
+confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
 ```
 
-### **Network Construction Parameters**
-```bash
-# Contact definition
---cutoff-distance 4.5               # Distance cutoff (Å)
---contact-selection "protein"       # Atom selection for network
---interaction-types distance        # Network interaction types
-
-# Network topology
---min-contacts 1                    # Minimum contacts per residue
---contact-method ca_distance        # Contact calculation method
-```
-
-### **Analysis Method Selection**
-```bash
-# Core analysis components
---compute-dccm / --no-dccm          # Dynamic cross-correlation matrix
---compute-pca / --no-pca            # Principal component analysis
---compute-landscape / --no-landscape # Free energy landscapes
---compute-msm / --no-msm            # Markov State Models
-
-# Advanced network analysis
---compute-centrality                # Centrality measures
---compute-communities               # Community detection
---compute-robustness                # Network robustness analysis
---compute-paths                     # Shortest path analysis
-```
-
-### **Community Detection Parameters**
-```bash
-# Algorithm selection
---community-method leiden           # {leiden,louvain,spectral,hierarchical}
---resolution 1.0                    # Resolution parameter (leiden/louvain)
---n-communities 5                   # Target communities (spectral)
-
-# Validation options
---community-validation              # Cross-validation of communities
---stability-analysis                # Community stability assessment
-```
-
-### **Dynamic Analysis Parameters**
-```bash
-# Cross-correlation analysis
---dccm-selection "name CA"          # Atoms for correlation analysis
---dccm-cutoff 0.3                   # Correlation significance threshold
-
-# Principal component analysis  
---pca-components 10                 # Number of components to compute
---pca-selection "protein"           # Atom selection for PCA
-
-# Energy landscape analysis
---landscape-temperature 300         # Temperature for Boltzmann weighting
---landscape-bins 50                 # Number of bins per dimension
-```
-
-### **MSM Analysis Parameters**
-```bash
-# Basic MSM options
---msm-lag-time 10                   # Lag time for transition matrix (frames)
---msm-clusters 100                  # Number of microstates
---msm-stride 1                      # Frame sampling stride
---msm-features distances            # {distances,coordinates,angles,dihedrals}
-
-# Clustering options
---msm-clustering kmeans             # {kmeans,regular_space,minibatch_kmeans}
---msm-cluster-distance-cutoff 2.0   # Distance cutoff for clustering
-
-# Kinetic analysis options
---kinetic-timescales 5              # Number of timescales to compute
---metastable-states 5               # Number of macrostates (PCCA+)
---transition-analysis               # Detailed transition analysis
---pathway-analysis                  # Dominant pathway identification
-
-# Model validation
---msm-validation                    # Enable model validation
---cross-validation-folds 5          # Number of CV folds
---bootstrap-samples 100             # Bootstrap samples for uncertainty
-
-# Advanced MSM options
---no-kinetics                       # Skip kinetic analysis
---no-metastable                     # Skip metastable state analysis
---save-discrete-trajectory          # Save state assignments
-```
-
-### **Allosteric Analysis Parameters**
-```bash
-# Allosteric pathway analysis
---allosteric-sources A_50 B_50      # Source residues (format: chain_resid)
---allosteric-targets A_25 B_25      # Target residues
---allosteric-method shortest_path   # {shortest_path,random_walk,betweenness}
---max-path-length 10                # Maximum path length to consider
-
-# Communication analysis
---communication-efficiency          # Global efficiency measures
---local-efficiency                  # Local clustering analysis
---small-world-analysis              # Small-world network properties
-```
-
-### **Statistical Analysis Parameters**
-```bash
-# Significance testing
---significance-testing              # Enable statistical validation
---n-bootstrap 1000                  # Bootstrap samples
---confidence-level 0.95             # Confidence interval level
---multiple-testing-correction fdr   # {bonferroni,fdr,none}
-
-# Comparative analysis
---compare-method ks_test            # {ks_test,t_test,mann_whitney}
---effect-size-threshold 0.2         # Minimum effect size
-```
-
-### **Visualization Parameters**
-```bash
-# Plot customization
---plot-style publication            # {publication,presentation,notebook}
---color-scheme viridis              # Color palette
---figure-size 12 9                  # Figure dimensions (width height)
---dpi 300                           # Resolution for raster formats
-
-# Network visualization
---network-layout spring             # {spring,circular,kamada_kawai}
---node-size-method centrality       # {centrality,degree,uniform}
---edge-width-method weight          # {weight,uniform,significance}
-
-# Specialized plots
---plot-network-evolution            # Time-resolved network properties
---plot-energy-landscapes            # 2D/3D energy surfaces
---plot-msm-network                  # MSM transition network
---plot-pathway-heatmaps             # Allosteric pathway visualization
-```
-
-### **Performance and Debugging Parameters**
-```bash
-# Performance tuning
---n-cores 4                         # Number of CPU cores
---chunk-size 1000                   # Trajectory chunk size (frames)
---memory-limit 8GB                  # Memory usage limit
-
-# Debugging options
---verbose                           # Detailed output
---debug                             # Debug mode with extra info
---profile                           # Performance profiling
---log-level INFO                    # {DEBUG,INFO,WARNING,ERROR}
---save-intermediate                 # Save intermediate results
-```
-
-### **Platform-Specific Options**
-```bash
-# Windows compatibility
---use-utf8-encoding                 # Force UTF-8 encoding
---windows-path-fix                  # Handle Windows path issues
-
-# HPC/cluster options
---batch-mode                        # Disable interactive features
---no-display                        # Disable GUI components
---scratch-dir /tmp/confdelta        # Temporary directory
-```
+The full option reference is in **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
+It is generated from the code and checked against it by the test suite, so it
+cannot document an option that does not exist.
 
 ##  **License**
 

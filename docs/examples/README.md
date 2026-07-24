@@ -1,288 +1,162 @@
-# confdelta Examples: HIV Protease Drug Resistance Analysis
+# Examples
 
-This directory contains comprehensive examples demonstrating how to use confdelta for studying HIV protease drug resistance mechanisms through network analysis. These examples progress from basic single-simulation analysis to advanced multi-mutant comparative studies.
+Every command on this page is checked against the real command-line parser by
+the test suite, so nothing here can drift out of existence.
 
-## Example Overview
+> **Scope.** confdelta 0.1.0 reports **descriptive differences only**. There is
+> no significance testing, no effect-size estimation and no multiple-testing
+> correction. Where this page says "changed", it means the number differs — not
+> that the difference is distinguishable from noise. See
+> [AUDIT.md](../../AUDIT.md) for a precise account of what exists.
 
-### **Example 1: Single Wild-Type Analysis**
-`01_single_wildtype_analysis.md`
+## Compare two ensembles
 
-**Purpose**: Establish baseline network properties for wild-type HIV protease
-**Use Case**: Understanding normal protein dynamics and communication networks
-**Key Learning**: Basic confdelta usage, output interpretation, network visualization
+The primary use. Wild-type against a mutant:
 
-**Command**:
 ```bash
-confdelta single -t hiv_wt_complex.pdb -x hiv_wt_trajectory.xtc -n HIV_WT_Baseline
+confdelta compare -a wt.pdb wt.xtc -b mutant.pdb mutant.xtc -o results/
 ```
+
+Label the conditions so the output directories and tables read clearly:
+
+```bash
+confdelta compare \
+  -a wt.pdb wt.xtc      --a-name wild_type \
+  -b v82a.pdb v82a.xtc  --b-name V82A \
+  -o hiv_wt_vs_v82a/
+```
+
+### What you get
+
+```
+hiv_wt_vs_v82a/
+├── 01_individual_analyses/       full analysis of each ensemble separately
+├── 02_network_comparisons/       edge weight and centrality changes
+├── 03_dynamics_comparisons/      DCCM difference matrix and heatmap
+├── 04_energetics_comparisons/    energy surface differences
+├── 05_kinetics_comparisons/      MSM timescale changes
+├── 06_allosteric_comparisons/    pathway disruption, hotspot rank changes
+└── 07_comprehensive_report/      HTML summary
+```
+
+The tables written are:
+
+| File | Contents |
+|---|---|
+| `02_network_comparisons/edge_weight_changes.csv` | Per-contact weight change |
+| `02_network_comparisons/<metric>_centrality_changes.csv` | Per-residue centrality change, one file per metric |
+| `03_dynamics_comparisons/large_correlation_changes.csv` | Residue pairs whose \|Δρ\| exceeds `correlation_change_threshold` |
+| `05_kinetics_comparisons/timescale_changes.csv` | Implied timescale ratios |
+| `06_allosteric_comparisons/pathway_disruption_analysis.csv` | Per-pathway efficiency change |
+| `06_allosteric_comparisons/hotspot_ranking_changes.csv` | Residues whose hotspot rank moved |
+
+## Analyse a single ensemble
+
+```bash
+confdelta single -t system.pdb -x trajectory.xtc -n wild_type -o results/
+```
+
+Useful on its own, and it is the layer the comparison is built on.
+
+## Change analysis options
+
+The command line carries only what a typical run needs. Everything else lives
+in a config file:
+
+```bash
+confdelta example-config -o study.json
+```
+
+That writes every option at its default. Delete the ones you do not need — an
+omitted option keeps its default — then:
+
+```bash
+confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
+```
+
+A config that narrows the analysis to networks and allostery, with named
+allosteric endpoints:
+
+```json
+{
+  "analysis": {
+    "compute_msm": false,
+    "compute_energy_landscape": false,
+    "community_method": "louvain",
+    "allosteric_source_nodes": ["A_50", "B_50"],
+    "allosteric_target_nodes": ["A_25", "B_25"]
+  },
+  "comparison": {
+    "correlation_change_threshold": 0.15
+  }
+}
+```
+
+Full option reference: [docs/CONFIGURATION.md](../CONFIGURATION.md).
+
+## Markov state models
+
+MSM analysis needs the optional deeptime backend:
+
+```bash
+pip install "confdelta[msm]"
+```
+
+Without it, MSM analysis is skipped and a warning is logged; nothing else is
+affected. Configure it through the `analysis` section:
+
+```json
+{
+  "analysis": {
+    "compute_msm": true,
+    "msm_lag_time": 20,
+    "msm_n_clusters": 150,
+    "msm_feature_type": "distances",
+    "kinetic_timescales_count": 8,
+    "metastable_state_count": 6
+  }
+}
+```
+
+If estimation fails, confdelta raises and records the error. It does not
+substitute an approximate model — an earlier version silently returned invented
+timescales when estimation failed.
+
+## Python API
+
+```python
+from confdelta import AnalysisConfig, DifferentialAnalyzer, DifferentialConfig
+
+analyzer = DifferentialAnalyzer(DifferentialConfig(), output_dir="results/")
+results = analyzer.run_differential_analysis(
+    "wt.pdb", "wt.xtc", "wild_type",
+    "v82a.pdb", "v82a.xtc", "V82A",
+    AnalysisConfig(compute_msm=False),
+)
+
+dccm_change = results.dynamics_comparison.dccm_difference_matrix
+modularity_change = results.network_comparison.modularity_change
+```
+
+The API is being reworked to return structured, typed objects and to accept
+ensembles from sources other than trajectory files. Expect it to change before
+1.0.
 
 ---
 
-### **Example 2: Wild-Type vs Mutant Differential**
-`02_wildtype_vs_mutant_differential.md`
+## A note on what used to be here
 
-**Purpose**: Direct comparison between wild-type and L90M resistant mutant
-**Use Case**: Understanding how single mutations affect protein networks
-**Key Learning**: Basic differential analysis, resistance mechanism identification
+This directory previously held five worked examples totalling roughly 2,500
+lines. They were removed rather than updated: after the command line was
+reduced from 192 flag instances to under ten per subcommand, **all 68 flags
+they used had ceased to exist**, and not one of their commands could be run.
 
-**Command**:
-```bash
-confdelta diff -t1 hiv_wt.pdb -x1 wt.xtc -n1 WT -t2 hiv_l90m.pdb -x2 mut.xtc -n2 L90M
-```
+One of them also presented invented numbers as results — a pathway-disruption
+table leading to "23% efficiency loss in primary allosteric pathways", a
+correlation table, a centrality table, and a claim of "~40-60 significant
+changes" — none of which any run had produced. Four of the CSV files it told
+readers to open were never written by any code path.
 
----
-
-### ** Comprehensive Differential Analysis**
-`comprehensive_differential_analysis_example.md`
-
-**Purpose**: Complete v1.5.0 differential analysis across all molecular dynamics dimensions
-**Use Case**: Quantitative resistance mechanism understanding with statistical rigor
-**Key Learning**: Advanced differential analysis, statistical significance, publication-quality results
-
-**Command**:
-```bash
-confdelta differential -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
-                        -t2 hiv_v82a.pdb -x2 v82a.xtc -n2 "V82A_Mutant" \
-                        -o hiv_resistance_analysis --statistical-tests --publication-figures
-```
-
-**Features**:
-- Complete network topology, dynamics, energetics, kinetics, and allosteric analysis
-- Statistical significance testing with p-values and effect sizes
-- Professional output organization suitable for publication
-- Comprehensive HTML reports and publication-quality figures
-
----
-
-### **Example 3: Multi-Mutant Comparison**
-`03_multi_mutant_comparison.md`
-
-**Purpose**: Systematic analysis of multiple resistance mutations
-**Use Case**: Understanding resistance mechanism diversity and commonalities
-**Key Learning**: Batch analysis, pattern recognition, clinical correlation
-
-**Configuration**: `hiv_resistance_panel.json`
-**Command**:
-```bash
-confdelta compare -c hiv_resistance_panel.json -o hiv_resistance_study
-```
-
----
-
-### **Example 4: Advanced Differential Analysis** 
-`04_advanced_differential_analysis.md`
-
-**Purpose**: In-depth pathway mapping and allosteric network analysis
-**Use Case**: Mechanistic understanding for drug design applications
-**Key Learning**: Custom analysis scripts, pathway identification, experimental predictions
-
-## Scientific Context
-
-### HIV Protease Background
-
-HIV protease is a critical enzyme for viral replication that:
-- Processes viral polyproteins into mature functional proteins
-- Is targeted by protease inhibitor drugs
-- Develops resistance through specific mutations
-- Shows complex allosteric communication networks
-
-### Drug Resistance Challenge
-
-**Clinical Problem**:
-- Resistance mutations reduce drug efficacy
-- Multiple resistance pathways exist
-- Combination mutations have cumulative effects
-- New drugs needed to overcome resistance
-
-**Network Analysis Solution**:
-- Maps how mutations affect protein communication
-- Identifies alternative drug targets
-- Predicts mutation effects
-- Guides rational drug design
-
-## Analysis Progression
-
-### **Level 1: Exploration** (Example 1)
-- Basic network properties
-- System validation
-- Method familiarization
-- Output interpretation
-
-### **Level 2: Basic Comparison** (Example 2) 
-- Mutation impact assessment
-- Basic differential contact analysis
-- Resistance mechanism hypothesis
-- Simple statistical analysis
-
-### **Level 2+: Comprehensive Comparison** (Comprehensive Example)
-- Complete differential analysis across all MD dimensions
-- Advanced statistical significance testing
-- Publication-ready results and figures
-- Professional output organization
-
-### **Level 3: Systematic** (Example 3)
-- Multiple mutation patterns
-- Resistance classification
-- Clinical correlation
-- Pattern recognition
-
-### **Level 4: Mechanistic** (Example 4)
-- Pathway mapping
-- Allosteric network analysis
-- Experimental predictions
-- Drug design implications
-
-## Key Scientific Concepts
-
-### **Residue Interaction Networks (RINs)**
-- Residues as nodes, contacts as edges
-- Dynamic networks reflecting protein motion
-- Communication pathway identification
-- Allosteric mechanism mapping
-
-### **Network Centrality Measures**
-- **Betweenness**: Communication bottlenecks
-- **Closeness**: Information spreading efficiency  
-- **Degree**: Local connectivity hubs
-- **Eigenvector**: Influence within network
-
-### **Comprehensive Differential Analysis**
-- **Network Topology Changes**: Node/edge additions and removals
-- **Dynamic Correlation Differences**: DCCM matrix comparisons with statistical testing
-- **Energy Landscape Alterations**: Conformational state stability changes
-- **Kinetic Pathway Modifications**: MSM timescale and flux changes
-- **Allosteric Communication Disruption**: Complete pathway efficiency analysis
-
-### **Resistance Mechanisms**
-- **Active Site Volume**: Direct binding site expansion
-- **Flap Dynamics**: Altered inhibitor access kinetics
-- **Allosteric Networks**: Long-range communication disruption
-- **Cooperative Binding**: Multi-site binding effects
-
-## 🛠Technical Requirements
-
-### **Input Files Needed**
-```
-data/
-├── hiv_wt_complex.pdb           # Wild-type structure
-├── hiv_wt_trajectory.xtc        # WT dynamics (100 ns)
-├── hiv_l90m_complex.pdb         # L90M mutant structure  
-├── hiv_l90m_trajectory.xtc      # L90M dynamics
-├── hiv_v82a_complex.pdb         # V82A mutant (for comprehensive example)
-├── hiv_v82a_trajectory.xtc      # V82A dynamics
-├── hiv_i84v_complex.pdb         # I84V mutant
-├── hiv_i84v_trajectory.xtc      # I84V dynamics
-├── hiv_m46i_complex.pdb         # M46I mutant
-├── hiv_m46i_trajectory.xtc      # M46I dynamics
-├── hiv_l10i_l63p_complex.pdb    # Double mutant
-├── hiv_l10i_l63p_trajectory.xtc # Double mutant dynamics
-└── hiv_multidrug_complex.pdb    # Multi-drug resistant
-    hiv_multidrug_trajectory.xtc # MDR dynamics
-```
-
-### **System Requirements**
-- **Memory**: 8-16 GB RAM for large networks (32 GB for comprehensive analysis)
-- **CPU**: Multi-core recommended for parallel processing
-- **Storage**: 5-10 GB for basic examples, 20-50 GB for comprehensive analysis
-- **Time**: 10 minutes - 2 hours depending on analysis complexity
-
-### **Software Dependencies**
-- confdelta toolkit v1.5.0+ (installed)
-- Python 3.8+ with scientific libraries
-- Optional: PyMOL, Cytoscape for visualization
-- Optional: Jupyter notebooks for interactive analysis
-
-## Expected Outcomes
-
-### **Scientific Insights**
-1. **Mutation Classification**: Different resistance mechanisms
-2. **Network Resilience**: Protein adaptability patterns  
-3. **Allosteric Pathways**: Communication route identification
-4. **Drug Targets**: Novel therapeutic intervention points
-5. **Quantitative Changes**: Statistical significance of all molecular changes
-
-### **Methodological Skills**
-1. **confdelta Proficiency**: Complete toolkit usage including v1.5.0 features
-2. **Network Analysis**: Interpretation of complex networks
-3. **Statistical Analysis**: Significance testing and validation
-4. **Scientific Visualization**: Publication-quality figures
-5. **Comprehensive Reporting**: Professional manuscript preparation
-
-### **Practical Applications**
-1. **Drug Design**: Rational inhibitor development
-2. **Resistance Prediction**: Clinical outcome forecasting
-3. **Personalized Medicine**: Patient-specific treatment strategies
-4. **Research Planning**: Experimental design optimization
-5. **Publication Preparation**: Statistical rigor and professional presentation
-
-## Workflow Integration
-
-### **Research Pipeline Integration**
-```
-1. MD Simulations → 2. confdelta Analysis → 3. Statistical Analysis → 4. Hypothesis Generation
-                           ↓                        ↓                    ↓
-7. Publication ← 6. Manuscript Prep ← 5. Validation Studies ← Experimental Design
-```
-
-### **Iterative Analysis Cycle**
-1. **Initial Analysis**: Basic network properties
-2. **Comprehensive Comparison**: Full differential analysis with statistics
-3. **Hypothesis Formation**: Mechanism proposals  
-4. **Targeted Analysis**: Focused investigations
-5. **Validation Design**: Experimental planning
-6. **Results Integration**: Knowledge refinement
-
-## Learning Objectives
-
-After completing these examples, you will be able to:
-
-1. **Analyze single MD simulations** for network properties
-2. **Compare multiple simulations** systematically
-3. **Perform comprehensive differential analysis** across all MD dimensions
-4. **Apply statistical significance testing** to molecular changes
-5. **Generate publication-quality results** with professional organization
-6. **Identify differential contacts** and their significance
-7. **Map allosteric pathways** and communication networks
-8. **Correlate network changes** with experimental data
-9. **Design validation experiments** based on predictions
-
-## Getting Started
-
-### **Recommended Learning Path**
-
-1. **Start with Example 1** - Learn basic confdelta usage
-2. **Try Example 2** - Understand basic differential analysis
-3. **Use Comprehensive Example** - Experience full v1.5.0 capabilities
-4. **Advance to Example 3** - Handle multiple simulations
-5. **Complete Example 4** - Advanced mechanistic analysis
-
-### **Quick Start for Comprehensive Analysis**
-```bash
-# Basic comprehensive differential analysis
-confdelta differential \
-  -t1 hiv_wt.pdb -x1 wt.xtc -n1 "Wild_Type" \
-  -t2 hiv_v82a.pdb -x2 v82a.xtc -n2 "V82A_Mutant" \
-  -o results
-```
-
-## Additional Resources
-
-### **Scientific Background**
-- HIV protease structure and function reviews
-- Drug resistance mechanism literature
-- Network analysis methodology papers
-- Allosteric regulation principles
-
-### **Technical Documentation**
-- confdelta v1.5.0 user guide and API reference
-- NetworkX documentation for graph analysis
-- MDAnalysis tutorials for trajectory processing
-- Statistical analysis best practices
-
-### **Visualization Tools**
-- Cytoscape for network visualization
-- PyMOL for structural analysis
-- Python matplotlib/seaborn for data visualization
-- VMD for trajectory analysis
-
-These examples provide a complete learning path from basic network analysis to advanced resistance mechanism studies, preparing researchers to apply confdelta to their own protein systems and research questions.
+The prose remains in git history. A validated worked example, reproducing a
+published result with committed input data and a test asserting the numbers, is
+a planned deliverable and will replace this page.
