@@ -1,28 +1,33 @@
 #!/usr/bin/env python3
 """
-MD-Compare: Comprehensive Protein Dynamics Analysis Platform
+confdelta: statistical comparison of protein conformational ensembles.
 
-A toolkit for analyzing and comparing molecular dynamics simulations with
-network analysis, conformational dynamics, energy landscapes, and kinetic
-modeling capabilities.
+Compares two conformational ensembles across networks, dynamics, energetics
+and kinetics. Single-ensemble analysis (residue interaction networks, DCCM,
+PCA, free energy landscapes, Markov state models) is provided as the layer
+the comparison is built on.
+
+confdelta continues MD-Compare, which was previously versioned to 1.5.0. The
+version was reset to 0.1.0 at the rename; see CHANGELOG.md.
 
 Author: Dr Dean Sherry
 License: MIT
 
 Example
 -------
->>> from mdcompare import NetworkAnalyzer, AnalysisConfig
+>>> from confdelta import NetworkAnalyzer, AnalysisConfig
 >>> config = AnalysisConfig(compute_msm=True, msm_lag_time=10)
 >>> analyzer = NetworkAnalyzer(config)
 """
 
 from __future__ import annotations
 
-__version__ = "1.5.0"
+from ._version import __version__
+
 __author__ = "Dr Dean Sherry"
 __email__ = ""
 __license__ = "MIT"
-__url__ = "https://github.com/DoctorDean/MD-Compare"
+__url__ = "https://github.com/DoctorDean/confdelta"
 
 # Version info tuple for programmatic access
 __version_info__ = tuple(int(v) for v in __version__.split(".") if v.isdigit())
@@ -86,7 +91,6 @@ def _detect(module_name: str) -> bool:
 
 
 FEATURES = {
-    "pyemma": _detect("pyemma"),
     "deeptime": _detect("deeptime"),
     "igraph": _detect("igraph"),
     "leidenalg": _detect("leidenalg"),
@@ -108,7 +112,7 @@ def check_dependencies(verbose: bool = False) -> dict:
         Mapping of optional feature name to availability (bool).
     """
     if verbose:
-        print(f"MD-Compare v{__version__}")
+        print(f"confdelta v{__version__}")
         print("=" * 40)
         print("Core dependencies:")
         core_deps = [
@@ -129,7 +133,7 @@ def check_dependencies(verbose: bool = False) -> dict:
             mark = "OK " if available else "-- "
             print(f"  [{mark}] {feature}")
 
-        if FEATURES["pyemma"] or FEATURES["deeptime"]:
+        if FEATURES["deeptime"]:
             print("    -> Markov State Model analysis available")
         if FEATURES["igraph"] and FEATURES["leidenalg"]:
             print("    -> Leiden community detection available")
@@ -144,7 +148,7 @@ def get_version_info() -> dict:
     import sys
 
     info = {
-        "md_compare_version": __version__,
+        "confdelta_version": __version__,
         "python_version": sys.version,
         "platform": sys.platform,
         "features": dict(FEATURES),

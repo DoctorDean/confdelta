@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 
 """
-Markov State Model backend abstraction.
+Markov State Model backend.
 
-MD-Compare's MSM analysis was originally written directly against the
-PyEMMA API. PyEMMA is no longer actively maintained and is difficult to
-install on Python 3.11+, so this module introduces a thin abstraction with
-two interchangeable backends:
+confdelta's MSM analysis was originally written directly against the PyEMMA
+API. PyEMMA is end-of-life, is difficult to install on Python 3.11+, and was
+the reason the package carried a ``numpy<2`` ceiling. **PyEMMA support was
+removed in 0.1.0**; deeptime, its actively maintained successor by the same
+authors, is now the only backend.
 
-* **PyEMMA** -- the original backend, used as-is when available.
-* **deeptime** -- PyEMMA's actively maintained successor.
-
-Both backends are exposed through a single pair of entry points,
-:func:`cluster_features` and :func:`build_msm`, which return objects whose
-attributes match what the rest of ``core.py`` already expects (a PyEMMA-style
-surface: ``clustercenters``/``dtrajs`` for clustering; ``nstates``,
+This module remains a thin abstraction so that ``core.py`` is insulated from
+the backend. :func:`cluster_features` and :func:`build_msm` return objects
+whose attributes match the PyEMMA-style surface the rest of ``core.py``
+already expects (``clustercenters``/``dtrajs`` for clustering; ``nstates``,
 ``transition_matrix``, ``stationary_distribution``, ``eigenvalues()``,
-``timescales()``, ``mfpt()``, ``pcca()`` for the model).
+``timescales()``, ``mfpt()``, ``pcca()`` for the model), so deeptime models
+are wrapped rather than exposed directly.
 
-Backend selection
------------------
-``select_backend()`` honours an explicit preference, otherwise prefers
-PyEMMA (for exact backward compatibility) and falls back to deeptime.
-Neither library is imported until a backend is actually used.
+deeptime is an optional dependency (``pip install 'confdelta[msm]'``) and is
+not imported until a backend is actually used.
 """
 
 from __future__ import annotations
@@ -33,7 +29,7 @@ from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger("mdcompare")
+logger = logging.getLogger("confdelta")
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +44,13 @@ def _available(name: str) -> bool:
         return False
 
 
-PYEMMA_AVAILABLE = _available("pyemma")
 DEEPTIME_AVAILABLE = _available("deeptime")
-MSM_AVAILABLE = PYEMMA_AVAILABLE or DEEPTIME_AVAILABLE
+MSM_AVAILABLE = DEEPTIME_AVAILABLE
+
+_MISSING_BACKEND_MSG = (
+    "No MSM backend available. Install it with: pip install 'confdelta[msm]'. "
+    "(PyEMMA is no longer supported; deeptime is its maintained successor.)"
+)
 
 
 def select_backend(preference: str | None = None) -> str | None:
@@ -59,38 +59,29 @@ def select_backend(preference: str | None = None) -> str | None:
     Parameters
     ----------
     preference
-        Optional explicit choice: ``"pyemma"``, ``"deeptime"`` or ``"auto"``.
-        ``None`` and ``"auto"`` behave identically.
+        Optional explicit choice. ``"deeptime"``, ``"auto"`` and ``None`` all
+        resolve to deeptime. Any other value -- including ``"pyemma"``, which
+        was supported before 0.1.0 -- logs a warning and falls back to
+        auto-selection.
 
     Returns
     -------
     str or None
-        ``"pyemma"`` or ``"deeptime"`` if a usable backend is available,
-        otherwise ``None``.
+        ``"deeptime"`` if deeptime is installed, otherwise ``None``.
     """
     pref = (preference or "auto").lower()
 
     if pref == "pyemma":
-        if PYEMMA_AVAILABLE:
-            return "pyemma"
-        logger.warning("PyEMMA requested but not installed; falling back to auto-selection.")
+        logger.warning(
+            "PyEMMA support was removed in confdelta 0.1.0; using deeptime instead. "
+            "Install it with: pip install 'confdelta[msm]'."
+        )
         pref = "auto"
-    elif pref == "deeptime":
-        if DEEPTIME_AVAILABLE:
-            return "deeptime"
-        logger.warning("deeptime requested but not installed; falling back to auto-selection.")
+    elif pref not in ("auto", "deeptime"):
+        logger.warning("Unknown MSM backend preference '%s'; using auto-selection.", preference)
         pref = "auto"
 
-    if pref == "auto":
-        # Prefer PyEMMA for exact backward compatibility, then deeptime.
-        if PYEMMA_AVAILABLE:
-            return "pyemma"
-        if DEEPTIME_AVAILABLE:
-            return "deeptime"
-        return None
-
-    logger.warning("Unknown MSM backend preference '%s'; using auto-selection.", preference)
-    return select_backend("auto")
+    return "deeptime" if DEEPTIME_AVAILABLE else None
 
 
 # ===========================================================================
@@ -112,24 +103,6 @@ class _ClusteringResult:
     @property
     def n_clusters(self) -> int:
         return len(self.clustercenters)
-
-
-def _cluster_pyemma(features: np.ndarray, n_clusters: int, method: str) -> _ClusteringResult:
-    import pyemma.coordinates as coor
-
-    if method == "minibatch_kmeans":
-        clustering = coor.cluster_mini_batch_kmeans(data=[features], k=n_clusters, max_iter=500)
-    elif method == "regular_space":
-        clustering = coor.cluster_regspace(data=[features], dmin=0.5)
-    else:
-        if method != "kmeans":
-            logger.warning("Unknown clustering method '%s'; using kmeans.", method)
-        clustering = coor.cluster_kmeans(data=[features], k=n_clusters, max_iter=500)
-
-    return _ClusteringResult(
-        dtrajs=[np.asarray(d) for d in clustering.dtrajs],
-        cluster_centers=np.asarray(clustering.clustercenters),
-    )
 
 
 def _cluster_deeptime(features: np.ndarray, n_clusters: int, method: str) -> _ClusteringResult:
@@ -181,14 +154,10 @@ def cluster_features(
     _ClusteringResult
         Object exposing ``dtrajs`` and ``clustercenters``.
     """
-    chosen = select_backend(backend)
-    if chosen is None:
-        raise RuntimeError("No MSM backend available (install 'pyemma' or 'deeptime').")
+    if select_backend(backend) is None:
+        raise RuntimeError(_MISSING_BACKEND_MSG)
 
-    method = (method or "kmeans").lower()
-    if chosen == "pyemma":
-        return _cluster_pyemma(features, n_clusters, method)
-    return _cluster_deeptime(features, n_clusters, method)
+    return _cluster_deeptime(features, n_clusters, (method or "kmeans").lower())
 
 
 # ===========================================================================
@@ -315,14 +284,6 @@ class _PCCAAdapter:
         return getattr(self._pcca, item)
 
 
-def _build_msm_pyemma(dtraj: np.ndarray, lag: int, n_timescales: int):
-    import pyemma.msm as msm
-
-    its = msm.its(dtraj, lags=_lag_schedule(dtraj), nits=n_timescales)
-    msm_model = msm.estimate_markov_model(dtraj, lag=lag)
-    return msm_model, its.timescales
-
-
 def _build_msm_deeptime(dtraj: np.ndarray, lag: int, n_timescales: int):
     from deeptime.markov import TransitionCountEstimator
     from deeptime.markov.msm import MaximumLikelihoodMSM
@@ -390,22 +351,17 @@ def build_msm(
     Returns
     -------
     (model, lag_times, implied_timescales)
-        ``model`` has a PyEMMA-style surface (native PyEMMA model, or a
-        deeptime model wrapped in :class:`_DeeptimeMSMAdapter`).
-        ``lag_times`` is the probed lag schedule; ``implied_timescales`` is a
-        list of timescale arrays, one per probed lag.
+        ``model`` is a deeptime MSM wrapped in :class:`_DeeptimeMSMAdapter`,
+        which presents a PyEMMA-style surface. ``lag_times`` is the probed lag
+        schedule; ``implied_timescales`` is a list of timescale arrays, one per
+        probed lag.
     """
-    chosen = select_backend(backend)
-    if chosen is None:
-        raise RuntimeError("No MSM backend available (install 'pyemma' or 'deeptime').")
+    if select_backend(backend) is None:
+        raise RuntimeError(_MISSING_BACKEND_MSG)
 
     dtraj = np.asarray(dtraj)
     lag_times = _lag_schedule(dtraj)
-
-    if chosen == "pyemma":
-        model, timescales = _build_msm_pyemma(dtraj, lag, n_timescales)
-    else:
-        model, timescales = _build_msm_deeptime(dtraj, lag, n_timescales)
+    model, timescales = _build_msm_deeptime(dtraj, lag, n_timescales)
 
     return model, lag_times, timescales
 
@@ -413,7 +369,6 @@ def build_msm(
 def backend_report() -> dict:
     """Return a small dict describing MSM backend availability."""
     return {
-        "pyemma": PYEMMA_AVAILABLE,
         "deeptime": DEEPTIME_AVAILABLE,
         "selected": select_backend("auto"),
     }

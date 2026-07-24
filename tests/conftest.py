@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for the MD-Compare test suite.
+"""Shared pytest fixtures for the confdelta test suite.
 
 These fixtures build small *synthetic* MD systems on the fly so the test
 suite has no dependency on external data packages (e.g. MDAnalysisTests)
@@ -83,7 +83,7 @@ def chainless_universe():
 @pytest.fixture
 def synthetic_simulation(synthetic_universe, monkeypatch):
     """A loaded MDSimulation wrapping the synthetic Universe."""
-    from mdcompare.core import MDSimulation, SimulationConfig
+    from confdelta.core import MDSimulation, SimulationConfig
 
     config = SimulationConfig(
         name="synthetic",

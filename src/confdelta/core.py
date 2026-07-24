@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-MD-Compare: A comprehensive toolkit for comparing molecular dynamics simulations
+confdelta: A comprehensive toolkit for comparing molecular dynamics simulations
 
 This module provides the core classes for loading, analyzing, and comparing
 MD simulations using various network analysis methods.
@@ -14,11 +14,11 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger("mdcompare")
+logger = logging.getLogger("confdelta")
 
 try:
     import MDAnalysis as mda
@@ -56,24 +56,23 @@ except ImportError:
 
 # Markov State Model backend detection.
 #
-# The MSM analysis supports two interchangeable backends, PyEMMA and
-# deeptime. All backend selection and the heavy imports live in
-# mdcompare.msm_backends; neither library is imported at module-import time.
-# DEEPTIME_AVAILABLE / PYEMMA_AVAILABLE are re-exported for callers that
-# introspect backend availability via mdcompare.core.
+# deeptime is the only supported MSM backend (PyEMMA was removed in 0.1.0).
+# Backend detection and the heavy imports live in confdelta.msm_backends;
+# deeptime is not imported at module-import time. DEEPTIME_AVAILABLE and
+# MSM_AVAILABLE are re-exported for callers that introspect backend
+# availability via confdelta.core.
+from ._version import __version__  # noqa: E402
 from .msm_backends import (  # noqa: E402,F401
     DEEPTIME_AVAILABLE,
     MSM_AVAILABLE,
-    PYEMMA_AVAILABLE,
 )
 
 if not MSM_AVAILABLE:
     logger.info(
         "No MSM backend found. Markov State Model analysis will be skipped. "
-        "Install with: pip install 'md-compare[msm]'"
+        "Install with: pip install 'confdelta[msm]'"
     )
 
-# Alternative MSM libraries as fallback
 # =====================================================
 # DATA STRUCTURES AND CONFIGURATION
 # =====================================================
@@ -88,7 +87,7 @@ class SimulationConfig:
     trajectory: str
     selection: str = "protein and not name H*"
     description: str = ""
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -99,8 +98,8 @@ class SimulationConfig:
 class AnalysisConfig:
     """Configuration for network analysis parameters"""
 
-    cutoffs: Dict[str, float] = None
-    interaction_types: List[str] = None
+    cutoffs: dict[str, float] = None
+    interaction_types: list[str] = None
     threshold: float = 0.2
     timeout_seconds: int = 300
     segments: int = 5
@@ -122,13 +121,13 @@ class AnalysisConfig:
     compute_communities: bool = True
     community_method: str = "leiden"  # leiden, louvain, spectral, hierarchical
     compute_paths: bool = True
-    path_analysis_nodes: List[str] = None  # Specific nodes for detailed path analysis
+    path_analysis_nodes: list[str] = None  # Specific nodes for detailed path analysis
     allosteric_analysis: bool = True
-    allosteric_source_nodes: List[str] = None  # Source residues for allosteric analysis
-    allosteric_target_nodes: List[str] = None  # Target residues for allosteric analysis
+    allosteric_source_nodes: list[str] = None  # Source residues for allosteric analysis
+    allosteric_target_nodes: list[str] = None  # Target residues for allosteric analysis
     # Markov State Model analysis options
     compute_msm: bool = True
-    msm_backend: str = "auto"  # auto, pyemma, deeptime
+    msm_backend: str = "auto"  # "auto" or "deeptime" (the only backend)
     msm_lag_time: int = 10  # Lag time for MSM construction (frames)
     msm_n_clusters: int = 100  # Number of clusters for discretization
     msm_stride: int = 1  # Stride for coordinate extraction
@@ -160,46 +159,46 @@ class NetworkMetrics:
     diameter: float = 0.0
     clustering_coefficient: float = 0.0
     modularity: float = 0.0
-    communities: List[List[str]] = None
-    betweenness_centrality: Dict[str, float] = None
-    closeness_centrality: Dict[str, float] = None
-    eigenvector_centrality: Dict[str, float] = None
-    degree_centrality: Dict[str, float] = None
+    communities: list[list[str]] = None
+    betweenness_centrality: dict[str, float] = None
+    closeness_centrality: dict[str, float] = None
+    eigenvector_centrality: dict[str, float] = None
+    degree_centrality: dict[str, float] = None
     network: nx.Graph = None
     # Dynamic analysis fields
-    dccm_matrix: Optional[np.ndarray] = None
-    pca_eigenvalues: Optional[np.ndarray] = None
-    pca_eigenvectors: Optional[np.ndarray] = None
-    pca_variance_explained: Optional[np.ndarray] = None
-    principal_components: Optional[np.ndarray] = None
+    dccm_matrix: np.ndarray | None = None
+    pca_eigenvalues: np.ndarray | None = None
+    pca_eigenvectors: np.ndarray | None = None
+    pca_variance_explained: np.ndarray | None = None
+    principal_components: np.ndarray | None = None
     # Energy landscape fields
-    energy_landscape: Optional[np.ndarray] = None
-    landscape_pc1_bins: Optional[np.ndarray] = None
-    landscape_pc2_bins: Optional[np.ndarray] = None
-    landscape_gradient_x: Optional[np.ndarray] = None
-    landscape_gradient_y: Optional[np.ndarray] = None
-    landscape_laplacian: Optional[np.ndarray] = None
-    landscape_minima: Optional[List[Tuple[float, float, float]]] = None
-    landscape_barriers: Optional[List[Dict[str, Any]]] = None
+    energy_landscape: np.ndarray | None = None
+    landscape_pc1_bins: np.ndarray | None = None
+    landscape_pc2_bins: np.ndarray | None = None
+    landscape_gradient_x: np.ndarray | None = None
+    landscape_gradient_y: np.ndarray | None = None
+    landscape_laplacian: np.ndarray | None = None
+    landscape_minima: list[tuple[float, float, float]] | None = None
+    landscape_barriers: list[dict[str, Any]] | None = None
     # Advanced network analysis fields
-    communities_detailed: Optional[Dict[str, Any]] = None
-    community_modularity: Optional[float] = None
-    community_node_assignments: Optional[Dict[str, int]] = None
-    path_metrics: Optional[Dict[str, Any]] = None
-    allosteric_pathways: Optional[Dict[str, Any]] = None
-    network_robustness: Optional[Dict[str, float]] = None
-    centrality_z_scores: Optional[Dict[str, Dict[str, float]]] = None
+    communities_detailed: dict[str, Any] | None = None
+    community_modularity: float | None = None
+    community_node_assignments: dict[str, int] | None = None
+    path_metrics: dict[str, Any] | None = None
+    allosteric_pathways: dict[str, Any] | None = None
+    network_robustness: dict[str, float] | None = None
+    centrality_z_scores: dict[str, dict[str, float]] | None = None
     # PyEMMA Markov State Model analysis fields
-    msm_model: Optional[Any] = None  # PyEMMA MSM object
-    msm_discretized_trajectory: Optional[np.ndarray] = None  # Cluster assignments
-    msm_cluster_centers: Optional[np.ndarray] = None  # Cluster center coordinates
-    msm_timescales: Optional[np.ndarray] = None  # Implied timescales
-    msm_eigenvalues: Optional[np.ndarray] = None  # Eigenvalues of transition matrix
-    msm_stationary_distribution: Optional[np.ndarray] = None  # Equilibrium state probabilities
-    msm_transition_matrix: Optional[np.ndarray] = None  # State-to-state transition matrix
-    metastable_states: Optional[Dict[str, Any]] = None  # Macrostate analysis
-    kinetic_analysis: Optional[Dict[str, Any]] = None  # Rate constants and pathways
-    msm_validation_scores: Optional[Dict[str, float]] = None  # Cross-validation results
+    msm_model: Any | None = None  # PyEMMA MSM object
+    msm_discretized_trajectory: np.ndarray | None = None  # Cluster assignments
+    msm_cluster_centers: np.ndarray | None = None  # Cluster center coordinates
+    msm_timescales: np.ndarray | None = None  # Implied timescales
+    msm_eigenvalues: np.ndarray | None = None  # Eigenvalues of transition matrix
+    msm_stationary_distribution: np.ndarray | None = None  # Equilibrium state probabilities
+    msm_transition_matrix: np.ndarray | None = None  # State-to-state transition matrix
+    metastable_states: dict[str, Any] | None = None  # Macrostate analysis
+    kinetic_analysis: dict[str, Any] | None = None  # Rate constants and pathways
+    msm_validation_scores: dict[str, float] | None = None  # Cross-validation results
 
     def __post_init__(self):
         if self.communities is None:
@@ -412,11 +411,11 @@ class MDSimulation:
         return len(self._universe.trajectory) if self._universe else 0
 
     @property
-    def chain_info(self) -> Dict:
+    def chain_info(self) -> dict:
         """Information about chains in the system"""
         return self._chain_info
 
-    def get_system_summary(self) -> Dict[str, Any]:
+    def get_system_summary(self) -> dict[str, Any]:
         """Get a summary of the system properties"""
         return {
             "name": self.name,
@@ -498,8 +497,8 @@ class NetworkAnalyzer:
             return float("inf")
 
     def compute_contact_maps(
-        self, simulation: MDSimulation, start_frame: int = 0, end_frame: Optional[int] = None
-    ) -> Dict[str, np.ndarray]:
+        self, simulation: MDSimulation, start_frame: int = 0, end_frame: int | None = None
+    ) -> dict[str, np.ndarray]:
         """
         Compute contact maps for a simulation
 
@@ -706,7 +705,7 @@ class NetworkAnalyzer:
         print(f"Network analysis complete: {metrics.n_nodes} nodes, {metrics.n_edges} edges")
         return metrics
 
-    def compute_dynamic_analysis(self, simulation: MDSimulation) -> Dict[str, Any]:
+    def compute_dynamic_analysis(self, simulation: MDSimulation) -> dict[str, Any]:
         """
         Compute dynamic cross-correlation matrix (DCCM) and principal component analysis (PCA)
 
@@ -793,7 +792,7 @@ class NetworkAnalyzer:
                 dynamic_results["msm_analysis"] = {"error": str(e)}
         elif self.config.compute_msm and not MSM_AVAILABLE:
             logger.warning(
-                "No MSM backend available; skipping MSM analysis. Install with: pip install 'md-compare[msm]'"
+                "No MSM backend available; skipping MSM analysis. Install with: pip install 'confdelta[msm]'"
             )
 
         print("Dynamic analysis completed!")
@@ -845,7 +844,7 @@ class NetworkAnalyzer:
 
         return dccm
 
-    def _compute_pca(self, coordinates: np.ndarray, n_components: int) -> Dict[str, Any]:
+    def _compute_pca(self, coordinates: np.ndarray, n_components: int) -> dict[str, Any]:
         """
         Compute Principal Component Analysis
 
@@ -921,7 +920,7 @@ class NetworkAnalyzer:
 
         return pca_results
 
-    def _compute_energy_landscape(self, principal_components: np.ndarray) -> Dict[str, Any]:
+    def _compute_energy_landscape(self, principal_components: np.ndarray) -> dict[str, Any]:
         """
         Compute free energy landscape from PC1 and PC2 projections
 
@@ -1019,7 +1018,7 @@ class NetworkAnalyzer:
 
     def _compute_msm_analysis(
         self, simulation: MDSimulation, coordinates: np.ndarray
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Compute comprehensive Markov State Model analysis (PyEMMA or deeptime)
 
@@ -1035,7 +1034,7 @@ class NetworkAnalyzer:
         Dict : MSM analysis results
         """
         if not MSM_AVAILABLE:
-            return {"error": "No MSM backend available (install 'pyemma' or 'deeptime')"}
+            return {"error": "No MSM backend available. Install with: pip install 'confdelta[msm]'"}
 
         msm_results = {}
 
@@ -1113,7 +1112,7 @@ class NetworkAnalyzer:
 
     def _extract_msm_features(
         self, simulation: MDSimulation, coordinates: np.ndarray
-    ) -> Optional[np.ndarray]:
+    ) -> np.ndarray | None:
         """Extract features for MSM construction"""
         feature_type = self.config.msm_feature_type.lower()
 
@@ -1183,7 +1182,7 @@ class NetworkAnalyzer:
 
         return distances
 
-    def _compute_backbone_angles(self, simulation: MDSimulation) -> Optional[np.ndarray]:
+    def _compute_backbone_angles(self, simulation: MDSimulation) -> np.ndarray | None:
         """Compute backbone dihedral angles"""
         try:
             # Use PyEMMA's built-in dihedral feature extraction
@@ -1202,7 +1201,7 @@ class NetworkAnalyzer:
             print(f"Backbone angle computation failed: {e}")
             return None
 
-    def _compute_sidechain_dihedrals(self, simulation: MDSimulation) -> Optional[np.ndarray]:
+    def _compute_sidechain_dihedrals(self, simulation: MDSimulation) -> np.ndarray | None:
         """Compute side chain dihedral angles"""
         try:
             # Placeholder for side chain dihedral extraction
@@ -1216,8 +1215,7 @@ class NetworkAnalyzer:
     def _perform_msm_clustering(self, features: np.ndarray):
         """Perform clustering for MSM discretization.
 
-        Delegates to mdcompare.msm_backends, which dispatches to whichever
-        backend (PyEMMA or deeptime) is selected by config.msm_backend.
+        Delegates to confdelta.msm_backends, which uses deeptime.
         """
         from .msm_backends import cluster_features
 
@@ -1230,12 +1228,12 @@ class NetworkAnalyzer:
 
     def _build_msm_model(
         self, discrete_trajectory: np.ndarray
-    ) -> Tuple[Any, np.ndarray, List[np.ndarray]]:
+    ) -> tuple[Any, np.ndarray, list[np.ndarray]]:
         """Build an MSM with lag-time handling.
 
-        Estimation is delegated to mdcompare.msm_backends (PyEMMA or
-        deeptime). On failure, falls back to a SimplifiedMSM that exposes
-        the same attribute surface so downstream analysis still runs.
+        Estimation is delegated to confdelta.msm_backends (deeptime). On
+        failure, falls back to a SimplifiedMSM that exposes the same
+        attribute surface so downstream analysis still runs.
         """
         from .msm_backends import build_msm
 
@@ -1328,7 +1326,7 @@ class NetworkAnalyzer:
 
             return simplified_model, np.array([1, 3, 5, 7, 9]), [np.array([10.0, 5.0, 2.0])]
 
-    def _analyze_msm_kinetics(self, msm_model, discrete_trajectory: np.ndarray) -> Dict[str, Any]:
+    def _analyze_msm_kinetics(self, msm_model, discrete_trajectory: np.ndarray) -> dict[str, Any]:
         """Analyze kinetic properties of the MSM"""
         kinetic_results = {}
 
@@ -1401,7 +1399,7 @@ class NetworkAnalyzer:
 
         return kinetic_results
 
-    def _analyze_metastable_states(self, msm_model) -> Dict[str, Any]:
+    def _analyze_metastable_states(self, msm_model) -> dict[str, Any]:
         """Analyze metastable macrostates"""
         metastable_results = {}
 
@@ -1472,7 +1470,7 @@ class NetworkAnalyzer:
 
         return metastable_results
 
-    def _validate_msm_model(self, msm_model, features: np.ndarray, clustering) -> Dict[str, float]:
+    def _validate_msm_model(self, msm_model, features: np.ndarray, clustering) -> dict[str, float]:
         """Validate MSM using cross-validation and other metrics"""
         validation_results = {}
 
@@ -1600,7 +1598,7 @@ class NetworkAnalyzer:
         pc1_edges: np.ndarray,
         pc2_edges: np.ndarray,
         min_separation: int = 3,
-    ) -> List[Tuple[float, float, float]]:
+    ) -> list[tuple[float, float, float]]:
         """
         Find local energy minima in the landscape
 
@@ -1628,7 +1626,7 @@ class NetworkAnalyzer:
         min_coords = np.where(local_min_mask)
 
         minima = []
-        for i, j in zip(min_coords[0], min_coords[1]):
+        for i, j in zip(min_coords[0], min_coords[1], strict=False):
             # Convert bin indices to PC coordinates
             pc1_coord = (
                 (pc1_edges[j] + pc1_edges[j + 1]) / 2 if j < len(pc1_edges) - 1 else pc1_edges[j]
@@ -1671,10 +1669,10 @@ class NetworkAnalyzer:
     def _analyze_energy_barriers(
         self,
         energy_surface: np.ndarray,
-        minima: List[Tuple[float, float, float]],
+        minima: list[tuple[float, float, float]],
         pc1_edges: np.ndarray,
         pc2_edges: np.ndarray,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Analyze energy barriers between minima
 
@@ -1713,7 +1711,7 @@ class NetworkAnalyzer:
                 pc2_bin_size = (pc2_edges[-1] - pc2_edges[0]) / (len(pc2_edges) - 1)
 
                 path_energies = []
-                for pc1_val, pc2_val in zip(pc1_path, pc2_path):
+                for pc1_val, pc2_val in zip(pc1_path, pc2_path, strict=False):
                     # Find closest bin
                     i_bin = int((pc2_val - pc2_edges[0]) / pc2_bin_size)
                     j_bin = int((pc1_val - pc1_edges[0]) / pc1_bin_size)
@@ -1877,7 +1875,7 @@ class NetworkAnalyzer:
 
         return metrics
 
-    def _leiden_communities(self, G: nx.Graph) -> Tuple[List[List[str]], float]:
+    def _leiden_communities(self, G: nx.Graph) -> tuple[list[list[str]], float]:
         """Leiden community detection (requires python-igraph and leidenalg)"""
         try:
             import igraph as ig
@@ -1911,7 +1909,7 @@ class NetworkAnalyzer:
             print("Leiden algorithm requires igraph and leidenalg packages. Using Louvain instead.")
             return self._louvain_communities(G)
 
-    def _louvain_communities(self, G: nx.Graph) -> Tuple[List[List[str]], float]:
+    def _louvain_communities(self, G: nx.Graph) -> tuple[list[list[str]], float]:
         """Louvain community detection"""
         try:
             import networkx.algorithms.community as nx_comm
@@ -1930,8 +1928,8 @@ class NetworkAnalyzer:
             return self._greedy_modularity_communities(G)
 
     def _spectral_communities(
-        self, G: nx.Graph, adj_matrix: np.ndarray, nodes: List[str]
-    ) -> Tuple[List[List[str]], float]:
+        self, G: nx.Graph, adj_matrix: np.ndarray, nodes: list[str]
+    ) -> tuple[list[list[str]], float]:
         """Spectral clustering for community detection"""
         try:
             # Determine number of clusters using eigengap heuristic
@@ -1977,8 +1975,8 @@ class NetworkAnalyzer:
             return [nodes], 0.0
 
     def _hierarchical_communities(
-        self, G: nx.Graph, adj_matrix: np.ndarray, nodes: List[str]
-    ) -> Tuple[List[List[str]], float]:
+        self, G: nx.Graph, adj_matrix: np.ndarray, nodes: list[str]
+    ) -> tuple[list[list[str]], float]:
         """Hierarchical clustering for community detection"""
         try:
             # Convert adjacency matrix to distance matrix
@@ -2021,7 +2019,7 @@ class NetworkAnalyzer:
             print(f"Hierarchical clustering failed: {e}")
             return [nodes], 0.0
 
-    def _greedy_modularity_communities(self, G: nx.Graph) -> Tuple[List[List[str]], float]:
+    def _greedy_modularity_communities(self, G: nx.Graph) -> tuple[list[list[str]], float]:
         """Fallback greedy modularity optimization"""
         try:
             communities_gen = nx.community.greedy_modularity_communities(G, weight="weight")
@@ -2032,7 +2030,7 @@ class NetworkAnalyzer:
             print(f"Greedy modularity failed: {e}")
             return [list(G.nodes())], 0.0
 
-    def _count_inter_community_edges(self, G: nx.Graph, communities: List[List[str]]) -> int:
+    def _count_inter_community_edges(self, G: nx.Graph, communities: list[list[str]]) -> int:
         """Count edges between different communities"""
         # Create community assignment mapping
         node_to_community = {}
@@ -2048,8 +2046,8 @@ class NetworkAnalyzer:
         return inter_edges
 
     def _compute_intra_community_density(
-        self, G: nx.Graph, communities: List[List[str]]
-    ) -> List[float]:
+        self, G: nx.Graph, communities: list[list[str]]
+    ) -> list[float]:
         """Compute density within each community"""
         densities = []
         for community in communities:
@@ -2063,7 +2061,7 @@ class NetworkAnalyzer:
 
         return densities
 
-    def _compute_inter_community_density(self, G: nx.Graph, communities: List[List[str]]) -> float:
+    def _compute_inter_community_density(self, G: nx.Graph, communities: list[list[str]]) -> float:
         """Compute density of edges between communities"""
         # Count total possible inter-community edges
         total_inter_possible = 0
@@ -2205,7 +2203,7 @@ class NetworkAnalyzer:
                 "total_paths": len(path_lengths),
             }
 
-            print(f"Path length distribution: {dict(zip(unique_lengths, counts))}")
+            print(f"Path length distribution: {dict(zip(unique_lengths, counts, strict=False))}")
 
             # Node eccentricities (max distance from each node)
             for node in sample_nodes:
@@ -2475,7 +2473,7 @@ class NetworkAnalyzer:
 
     def _identify_allosteric_sources(
         self, G: nx.Graph, metrics: NetworkMetrics, simulation: MDSimulation
-    ) -> List[str]:
+    ) -> list[str]:
         """Identify potential allosteric source nodes (e.g., binding sites, flaps)"""
         sources = []
 
@@ -2508,7 +2506,7 @@ class NetworkAnalyzer:
 
     def _identify_allosteric_targets(
         self, G: nx.Graph, metrics: NetworkMetrics, simulation: MDSimulation
-    ) -> List[str]:
+    ) -> list[str]:
         """Identify potential allosteric target nodes (e.g., active site)"""
         targets = []
 
@@ -2541,7 +2539,7 @@ class NetworkAnalyzer:
 
     def _compute_allosteric_pathway(
         self, G: nx.Graph, source: str, target: str, metrics: NetworkMetrics
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compute detailed allosteric pathway between source and target"""
         try:
             # Find shortest path
@@ -2572,7 +2570,7 @@ class NetworkAnalyzer:
                 "bottleneck_nodes": (
                     [
                         node
-                        for node, bet in zip(shortest_path, pathway_betweenness)
+                        for node, bet in zip(shortest_path, pathway_betweenness, strict=False)
                         if bet > np.mean(pathway_betweenness)
                     ]
                     if pathway_betweenness
@@ -2589,8 +2587,8 @@ class NetworkAnalyzer:
             return None
 
     def _identify_allosteric_hotspots(
-        self, pathways: List[Dict[str, Any]], G: nx.Graph
-    ) -> List[Dict[str, Any]]:
+        self, pathways: list[dict[str, Any]], G: nx.Graph
+    ) -> list[dict[str, Any]]:
         """Identify nodes that frequently appear in allosteric pathways"""
         node_frequency = defaultdict(int)
         node_pathway_info = defaultdict(list)
@@ -2629,7 +2627,7 @@ class NetworkAnalyzer:
 
         return hotspots[:20]  # Top 20 hotspots
 
-    def _compute_full_communication_matrix(self, G: nx.Graph) -> Tuple[np.ndarray, List[str]]:
+    def _compute_full_communication_matrix(self, G: nx.Graph) -> tuple[np.ndarray, list[str]]:
         """
         Compute communication efficiency matrix for all residue pairs in the network
 
@@ -2685,8 +2683,8 @@ class NetworkAnalyzer:
         return efficiency_matrix, all_residues
 
     def _analyze_pathway_redundancy(
-        self, pathways: List[Dict[str, Any]], G: nx.Graph
-    ) -> Dict[str, Any]:
+        self, pathways: list[dict[str, Any]], G: nx.Graph
+    ) -> dict[str, Any]:
         """Analyze redundancy in allosteric communication"""
         redundancy_info = {
             "total_pathways": len(pathways),
@@ -2708,8 +2706,8 @@ class NetworkAnalyzer:
         return redundancy_info
 
     def _identify_functional_regions(
-        self, pathways: List[Dict[str, Any]], communities: List[List[str]]
-    ) -> Dict[str, Any]:
+        self, pathways: list[dict[str, Any]], communities: list[list[str]]
+    ) -> dict[str, Any]:
         """Identify functional regions based on pathway and community analysis"""
         functional_regions = {"pathway_communities": [], "inter_community_bridges": []}
 
@@ -2742,8 +2740,8 @@ class NetworkAnalyzer:
         return functional_regions
 
     def _assess_pathway_robustness(
-        self, G: nx.Graph, pathways: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, G: nx.Graph, pathways: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Assess robustness of pathways to node removal"""
         robustness_info = {"critical_nodes": [], "network_resilience": 0.0}
 
@@ -3060,7 +3058,7 @@ class NetworkAnalyzer:
 
         return metrics
 
-    def analyze_trajectory_segments(self, simulation: MDSimulation) -> Dict[str, Any]:
+    def analyze_trajectory_segments(self, simulation: MDSimulation) -> dict[str, Any]:
         """
         Analyze trajectory in segments for statistical robustness
 
@@ -3110,7 +3108,7 @@ class MDComparator:
     Engine for comparing multiple MD simulations
     """
 
-    def __init__(self, simulations: List[MDSimulation], analyzer: NetworkAnalyzer):
+    def __init__(self, simulations: list[MDSimulation], analyzer: NetworkAnalyzer):
         """
         Initialize MD comparator
 
@@ -3134,7 +3132,7 @@ class MDComparator:
         if name in self.simulations:
             del self.simulations[name]
 
-    def compare_network_properties(self) -> Dict[str, Any]:
+    def compare_network_properties(self) -> dict[str, Any]:
         """
         Compare basic network properties across simulations
 
@@ -3163,9 +3161,7 @@ class MDComparator:
         self.comparison_results["network_properties"] = comparison
         return comparison
 
-    def compare_centrality_measures(
-        self, residue_keys: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+    def compare_centrality_measures(self, residue_keys: list[str] | None = None) -> dict[str, Any]:
         """
         Compare centrality measures for specific residues
 
@@ -3208,7 +3204,7 @@ class MDComparator:
         self.comparison_results["centrality_measures"] = centrality_comparison
         return centrality_comparison
 
-    def compare_contact_patterns(self, interaction_type: str = "distance") -> Dict[str, Any]:
+    def compare_contact_patterns(self, interaction_type: str = "distance") -> dict[str, Any]:
         """
         Compare contact patterns between simulations
 
@@ -3260,7 +3256,7 @@ class MDComparator:
 
     def find_differential_contacts(
         self, sim1_name: str, sim2_name: str, threshold_diff: float = 0.1
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Find contacts that differ significantly between two simulations
 
@@ -3340,7 +3336,7 @@ class MDComparator:
 
         return differential_results
 
-    def generate_comparison_report(self) -> Dict[str, Any]:
+    def generate_comparison_report(self) -> dict[str, Any]:
         """
         Generate a comprehensive comparison report
 
@@ -3376,7 +3372,7 @@ class OutputManager:
     Manages output generation and file saving for MD comparisons
     """
 
-    def __init__(self, output_dir: str = "md_compare_results"):
+    def __init__(self, output_dir: str = "confdelta_results"):
         """
         Initialize output manager with organized subdirectories
 
@@ -3491,11 +3487,11 @@ class OutputManager:
 
             # Create human-readable summary
             with open(reports_dir / f"{prefix}_analysis_summary.txt", "w", encoding="utf-8") as f:
-                f.write("MD-Compare Comprehensive Analysis Summary\n")
+                f.write("confdelta Comprehensive Analysis Summary\n")
                 f.write("=" * 50 + "\n\n")
                 f.write(f"Analysis: {simulation.name}\n")
                 f.write(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("Software: MD-Compare v1.4.0\n\n")
+                f.write(f"Software: confdelta v{__version__}\n\n")
 
                 # System overview
                 system_info = (
@@ -3537,7 +3533,7 @@ class OutputManager:
         except Exception as e:
             print(f"Warning: Could not create summary report: {e}")
 
-    def _extract_network_summary(self, simulation: MDSimulation) -> Dict[str, Any]:
+    def _extract_network_summary(self, simulation: MDSimulation) -> dict[str, Any]:
         """Extract network analysis summary"""
         if not simulation.network_metrics:
             return {}
@@ -3553,7 +3549,7 @@ class OutputManager:
 
         return summary
 
-    def _extract_dynamic_summary(self, simulation: MDSimulation) -> Dict[str, Any]:
+    def _extract_dynamic_summary(self, simulation: MDSimulation) -> dict[str, Any]:
         """Extract dynamic analysis summary"""
         if not hasattr(simulation, "dynamic_analysis") or not simulation.dynamic_analysis:
             return {}
@@ -3568,7 +3564,7 @@ class OutputManager:
 
         return summary
 
-    def _extract_msm_summary(self, simulation: MDSimulation) -> Dict[str, Any]:
+    def _extract_msm_summary(self, simulation: MDSimulation) -> dict[str, Any]:
         """Extract MSM analysis summary"""
         if not hasattr(simulation, "dynamic_analysis") or not simulation.dynamic_analysis:
             return {}
@@ -4038,7 +4034,7 @@ class OutputManager:
                             f.write("State_ID\tPopulation\tPopulation_Percent\n")
                             states = kinetic_data["top_populated_states"]
                             pops = kinetic_data["state_populations"]
-                            for state, pop in zip(states, pops):
+                            for state, pop in zip(states, pops, strict=False):
                                 f.write(f"{state}\t{pop:.6f}\t{pop*100:.2f}\n")
 
                 # Save metastable state information
@@ -4383,7 +4379,7 @@ class OutputManager:
         except Exception as e:
             print(f"Warning: Could not create DCCM visualization: {e}")
 
-    def _create_pca_visualization(self, pca_data: Dict[str, Any], prefix: str):
+    def _create_pca_visualization(self, pca_data: dict[str, Any], prefix: str):
         """Create PCA analysis visualization"""
         try:
             import matplotlib.pyplot as plt
@@ -4460,7 +4456,7 @@ class OutputManager:
         except Exception as e:
             print(f"Warning: Could not create PCA visualization: {e}")
 
-    def _create_landscape_visualization(self, landscape_data: Dict[str, Any], prefix: str):
+    def _create_landscape_visualization(self, landscape_data: dict[str, Any], prefix: str):
         """Create comprehensive energy landscape visualizations"""
         try:
 
@@ -4514,7 +4510,7 @@ class OutputManager:
 
             print(traceback.format_exc())
 
-    def _create_simple_landscape_plot(self, landscape_data: Dict[str, Any], prefix: str):
+    def _create_simple_landscape_plot(self, landscape_data: dict[str, Any], prefix: str):
         """Create simple energy landscape plot when detailed data is not available"""
         try:
             import matplotlib.pyplot as plt
@@ -4544,7 +4540,7 @@ class OutputManager:
         except Exception as e:
             print(f"Warning: Could not create simple landscape plot: {e}")
 
-    def _create_detailed_landscape_plot(self, landscape_data: Dict[str, Any], prefix: str):
+    def _create_detailed_landscape_plot(self, landscape_data: dict[str, Any], prefix: str):
         """Create detailed energy landscape visualization with all components"""
         try:
             import matplotlib.pyplot as plt
@@ -4824,7 +4820,7 @@ class OutputManager:
                     ax2.grid(True, alpha=0.3)
 
                     # Add value labels on bars
-                    for bar, count in zip(bars, counts):
+                    for bar, count in zip(bars, counts, strict=False):
                         if count > 0:
                             height = bar.get_height()
                             ax2.text(
@@ -4968,7 +4964,7 @@ class OutputManager:
                     ax4.grid(True, alpha=0.3)
 
                     # Add value labels on bars
-                    for bar, value in zip(bars, robustness_values):
+                    for bar, value in zip(bars, robustness_values, strict=False):
                         height = bar.get_height()
                         ax4.text(
                             bar.get_x() + bar.get_width() / 2.0,
@@ -5034,7 +5030,9 @@ class OutputManager:
                     ax5.grid(True, alpha=0.3)
 
                     # Add frequency labels on bars
-                    for _i, (bar, _score, freq) in enumerate(zip(bars, scores, frequencies)):
+                    for _i, (bar, _score, freq) in enumerate(
+                        zip(bars, scores, frequencies, strict=False)
+                    ):
                         width = bar.get_width()
                         ax5.text(
                             width + max(scores) * 0.01,
@@ -5248,7 +5246,7 @@ class OutputManager:
                 ax8.grid(True, alpha=0.3)
 
                 # Add value labels
-                for bar, value in zip(bars, efficiency_values):
+                for bar, value in zip(bars, efficiency_values, strict=False):
                     height = bar.get_height()
                     ax8.text(
                         bar.get_x() + bar.get_width() / 2.0,
@@ -5409,7 +5407,7 @@ class OutputManager:
                         ax3.set_xticklabels([f"Meta {i+1}" for i in range(len(counts))])
 
                         # Add value labels on bars
-                        for bar, count in zip(bars, counts):
+                        for bar, count in zip(bars, counts, strict=False):
                             height = bar.get_height()
                             ax3.text(
                                 bar.get_x() + bar.get_width() / 2.0,
@@ -5511,7 +5509,7 @@ class OutputManager:
                     ax7.grid(True, alpha=0.3)
 
                     # Add value labels
-                    for bar, value in zip(bars, values):
+                    for bar, value in zip(bars, values, strict=False):
                         height = bar.get_height()
                         ax7.text(
                             bar.get_x() + bar.get_width() / 2.0,
@@ -5579,7 +5577,7 @@ class OutputManager:
             print(traceback.format_exc())
 
     def _save_communication_efficiency_csv(
-        self, efficiency_matrix: np.ndarray, residue_labels: List[str], prefix: str
+        self, efficiency_matrix: np.ndarray, residue_labels: list[str], prefix: str
     ):
         """
         Save full communication efficiency matrix as CSV in allosteric directory
@@ -5670,10 +5668,10 @@ class MDCompare:
     """
 
     def __init__(
-        self, analysis_config: AnalysisConfig = None, output_dir: str = "md_compare_results"
+        self, analysis_config: AnalysisConfig = None, output_dir: str = "confdelta_results"
     ):
         """
-        Initialize MD-Compare workflow
+        Initialize confdelta workflow
 
         Parameters:
         -----------
@@ -5688,7 +5686,7 @@ class MDCompare:
         self.simulations = {}
         self.comparator = None
 
-        print(f"MD-Compare initialized with output directory: {output_dir}")
+        print(f"confdelta initialized with output directory: {output_dir}")
 
     def add_simulation(self, config: SimulationConfig) -> bool:
         """
@@ -5714,7 +5712,7 @@ class MDCompare:
 
         return success
 
-    def run_analysis(self, simulation_names: List[str] = None) -> Dict[str, Any]:
+    def run_analysis(self, simulation_names: list[str] = None) -> dict[str, Any]:
         """
         Run complete analysis on specified simulations
 
@@ -5772,7 +5770,7 @@ class MDCompare:
 
         return results_summary
 
-    def run_comparison(self, simulation_names: List[str] = None) -> Dict[str, Any]:
+    def run_comparison(self, simulation_names: list[str] = None) -> dict[str, Any]:
         """
         Run comparative analysis between simulations
 
@@ -5815,9 +5813,9 @@ class MDCompare:
             "contact_patterns": contact_comparison,
         }
 
-    def run_full_workflow(self, configs: List[SimulationConfig]) -> Dict[str, Any]:
+    def run_full_workflow(self, configs: list[SimulationConfig]) -> dict[str, Any]:
         """
-        Run complete MD-Compare workflow
+        Run complete confdelta workflow
 
         Parameters:
         -----------
@@ -5828,7 +5826,7 @@ class MDCompare:
         --------
         Dict : Complete analysis results
         """
-        print("Starting MD-Compare full workflow...")
+        print("Starting confdelta full workflow...")
 
         # Add all simulations
         successful_simulations = []
@@ -5862,7 +5860,7 @@ class MDCompare:
         with open(self.output_manager.output_dir / "workflow_summary.json", "w") as f:
             json.dump(final_report, f, indent=2, default=str)
 
-        print("\nMD-Compare workflow complete!")
+        print("\nconfdelta workflow complete!")
         print(f"Results saved to: {self.output_manager.output_dir}")
 
         return final_report

@@ -1,11 +1,11 @@
-"""Tests for mdcompare.core — configs, simulation loading, network analysis."""
+"""Tests for confdelta.core — configs, simulation loading, network analysis."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from mdcompare.core import (
+from confdelta.core import (
     AnalysisConfig,
     MDSimulation,
     NetworkAnalyzer,
@@ -147,7 +147,7 @@ class TestNetworkAnalyzer:
 
 
 # ---------------------------------------------------------------------------
-# MSM backend integration (delegates to mdcompare.msm_backends)
+# MSM backend integration (delegates to confdelta.msm_backends)
 # ---------------------------------------------------------------------------
 
 
@@ -156,10 +156,7 @@ class TestMSMIntegration:
     def _has_backend():
         import importlib.util
 
-        return (
-            importlib.util.find_spec("deeptime") is not None
-            or importlib.util.find_spec("pyemma") is not None
-        )
+        return importlib.util.find_spec("deeptime") is not None
 
     def _features(self, seed=0):
         rng = np.random.default_rng(seed)

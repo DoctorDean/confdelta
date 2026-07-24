@@ -3,80 +3,84 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "md-compare"
-version = "1.5.0"
-description = "Comprehensive protein dynamics analysis: network analysis, conformational dynamics, energy landscapes, kinetic modeling, and differential comparison of MD simulations."
+name = "confdelta"
+dynamic = ["version"]
+description = "Statistical comparison of two protein conformational ensembles: networks, dynamics and kinetics, with multiple-testing correction."
 readme = "README.md"
-requires-python = ">=3.8"
-license = { text = "MIT" }
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Dean Sherry" },
 ]
 keywords = [
+    "conformational ensembles",
     "molecular dynamics",
-    "network analysis",
+    "differential analysis",
+    "statistics",
+    "multiple testing correction",
     "protein dynamics",
-    "markov state models",
     "allosteric networks",
+    "markov state models",
     "structural biology",
-    "drug discovery",
-    "bioinformatics",
     "computational biology",
-    "kinetic modeling",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
+    "Typing :: Typed",
 ]
 
 dependencies = [
     "MDAnalysis>=2.4.0",
     "networkx>=2.8",
-    "numpy>=1.21.0,<2.0",
-    "scipy>=1.7.0",
-    "matplotlib>=3.5.0",
-    "seaborn>=0.11.0",
-    "pandas>=1.3.0",
-    "scikit-learn>=1.0.0",
-    "tqdm>=4.62.0",
+    "numpy>=1.23",
+    # scipy>=1.11 is a hard floor: scipy.stats.false_discovery_control (the
+    # Benjamini-Hochberg / Benjamini-Yekutieli implementation confdelta uses
+    # instead of a statsmodels runtime dependency) was added in 1.11.
+    "scipy>=1.11",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "pandas>=1.5",
+    "scikit-learn>=1.1",
+    "tqdm>=4.62",
 ]
 
 [project.optional-dependencies]
-# Kinetic modeling (Markov State Models). PyEMMA is the backend the MSM
-# code is written against and is the recommended choice. deeptime is its
-# successor and is provided as a forward-looking alternative.
-msm = ["pyemma>=2.5.11"]
-deeptime = ["deeptime>=0.4.4"]
+# Kinetic modelling (Markov State Models). deeptime is the only supported
+# backend; PyEMMA is end-of-life and was removed at 0.1.0.
+msm = ["deeptime>=0.4.4"]
 # Leiden community detection.
 leiden = ["python-igraph>=0.10.0", "leidenalg>=0.9.0"]
 # Interactive / extended visualization.
 viz = ["plotly>=5.0.0", "ipywidgets>=7.6.0"]
 # Experimental ML resistance classifier.
-ml = ["scikit-learn>=1.0.0", "joblib>=1.1.0"]
-# Development tooling.
+ml = ["joblib>=1.1.0"]
+# Development tooling. statsmodels is a test-only dependency: it provides the
+# independent cross-check for confdelta's FDR correction and is deliberately
+# NOT a runtime dependency.
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "statsmodels>=0.14",
     "build>=1.0.0",
     "twine>=4.0.0",
 ]
 docs = ["sphinx>=5.0.0", "sphinx-rtd-theme>=1.2.0", "myst-parser>=1.0.0"]
 all = [
-    "pyemma>=2.5.11",
+    "deeptime>=0.4.4",
     "python-igraph>=0.10.0",
     "leidenalg>=0.9.0",
     "plotly>=5.0.0",
@@ -85,32 +89,37 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/DoctorDean/MD-Compare"
-Repository = "https://github.com/DoctorDean/MD-Compare"
-Issues = "https://github.com/DoctorDean/MD-Compare/issues"
-Changelog = "https://github.com/DoctorDean/MD-Compare/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/DoctorDean/confdelta"
+Repository = "https://github.com/DoctorDean/confdelta"
+Issues = "https://github.com/DoctorDean/confdelta/issues"
+Changelog = "https://github.com/DoctorDean/confdelta/blob/master/CHANGELOG.md"
 
 [project.scripts]
-md-compare = "mdcompare.cli:main"
-mdcompare = "mdcompare.cli:main"
+confdelta = "confdelta.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
+[tool.setuptools.dynamic]
+version = { attr = "confdelta._version.__version__" }
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+confdelta = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "requires_msm: tests needing an optional MSM backend (deeptime/pyemma)",
+    "requires_msm: tests needing the optional deeptime MSM backend",
 ]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
@@ -118,8 +127,36 @@ ignore = ["E501", "B008"]
 
 [tool.black]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311", "py312"]
+target-version = ["py310"]
+
+[tool.mypy]
+# Deliberately no `python_version` pin: pinning it to 3.10 makes mypy parse
+# third-party stubs with 3.10 grammar, and numpy 2.5's stubs use `type`
+# statements (3.12+), which fails before any confdelta code is checked. mypy
+# therefore uses the interpreter it runs under. Version-specific behaviour
+# across 3.10-3.13 is covered by the pytest matrix instead.
+files = ["src/confdelta"]
+ignore_missing_imports = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# Type-checking debt, inherited from MD-Compare. Every module NOT listed below
+# is type-checked and must stay clean -- including every new module -- so the
+# public API is typed from birth. The four modules here carry 93 pre-existing
+# errors (core.py 89, differential.py 13, cli.py 2, resistance_classifier.py 2;
+# the cli.py errors originate in core.py's dataclass annotations). They are
+# being rewritten phase by phase and each is removed from this list as it is
+# brought up to standard. **This list must only ever shrink.**
+[[tool.mypy.overrides]]
+module = [
+    "confdelta.core",
+    "confdelta.differential",
+    "confdelta.cli",
+    "confdelta.experimental.resistance_classifier",
+]
+ignore_errors = true
 
 [tool.coverage.run]
-source = ["mdcompare"]
+source = ["confdelta"]
 branch = true

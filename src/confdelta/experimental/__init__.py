@@ -1,8 +1,8 @@
-"""Experimental MD-Compare features.
+"""Experimental confdelta features.
 
 Modules here are under active development; their APIs may change between
 minor releases. They are intentionally kept out of the top-level
-``mdcompare`` namespace so that importing the package never pulls in heavy
+``confdelta`` namespace so that importing the package never pulls in heavy
 or optional machine-learning dependencies.
 
 Currently provided

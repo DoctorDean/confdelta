@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entry point for ``python -m mdcompare``."""
+"""Entry point for ``python -m confdelta``."""
 
 import sys
 

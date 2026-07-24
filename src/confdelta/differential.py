@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-MD-Compare Differential Analysis Module
+confdelta Differential Analysis Module
 
 This module provides comprehensive simulation vs simulation comparative analysis,
 building on the robust single-simulation analysis framework.
@@ -12,13 +12,14 @@ import pickle
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
+from ._version import __version__
 from .core import AnalysisConfig, MDSimulation
 
-logger = logging.getLogger("mdcompare")
+logger = logging.getLogger("confdelta")
 
 try:
     import pandas as pd  # noqa: F401
@@ -96,23 +97,23 @@ class NetworkComparison:
     """Results of network topology comparison"""
 
     # Topology differences
-    nodes_added: List[str]
-    nodes_removed: List[str]
-    edges_added: List[Tuple[str, str]]
-    edges_removed: List[Tuple[str, str]]
-    edge_weight_changes: Dict[Tuple[str, str], float]
+    nodes_added: list[str]
+    nodes_removed: list[str]
+    edges_added: list[tuple[str, str]]
+    edges_removed: list[tuple[str, str]]
+    edge_weight_changes: dict[tuple[str, str], float]
 
     # Centrality differences
-    centrality_changes: Dict[str, Dict[str, float]]  # {metric: {node: change}}
-    centrality_ranking_changes: Dict[str, List[str]]  # {metric: [nodes_with_large_changes]}
+    centrality_changes: dict[str, dict[str, float]]  # {metric: {node: change}}
+    centrality_ranking_changes: dict[str, list[str]]  # {metric: [nodes_with_large_changes]}
 
     # Community structure differences
-    community_changes: Dict[str, Any]
+    community_changes: dict[str, Any]
     modularity_change: float
 
     # Global network property changes
-    network_property_changes: Dict[str, float]
-    statistical_significance: Dict[str, float]
+    network_property_changes: dict[str, float]
+    statistical_significance: dict[str, float]
 
 
 @dataclass
@@ -121,20 +122,20 @@ class DynamicsComparison:
 
     # DCCM differences
     dccm_difference_matrix: np.ndarray
-    significant_correlation_changes: List[
-        Tuple[str, str, float, float]
+    significant_correlation_changes: list[
+        tuple[str, str, float, float]
     ]  # (res1, res2, old_corr, new_corr)
-    regional_correlation_changes: Dict[str, Dict[str, float]]  # {region: {metric: value}}
+    regional_correlation_changes: dict[str, dict[str, float]]  # {region: {metric: value}}
 
     # PCA differences
     pca_variance_changes: np.ndarray
     eigenvector_similarities: np.ndarray
-    principal_component_shifts: Dict[int, float]  # {PC_index: similarity_score}
+    principal_component_shifts: dict[int, float]  # {PC_index: similarity_score}
 
     # Statistical analysis
     correlation_change_pvalues: np.ndarray
-    significant_residue_pairs: List[Tuple[str, str]]
-    effect_sizes: Dict[str, float]
+    significant_residue_pairs: list[tuple[str, str]]
+    effect_sizes: dict[str, float]
 
 
 @dataclass
@@ -142,18 +143,18 @@ class EnergeticsComparison:
     """Results of energetics comparison (energy landscapes)"""
 
     # Energy landscape differences
-    energy_difference_surface: Optional[np.ndarray]
-    minima_comparison: List[Dict[str, Any]]
-    barrier_height_changes: List[Dict[str, float]]
+    energy_difference_surface: np.ndarray | None
+    minima_comparison: list[dict[str, Any]]
+    barrier_height_changes: list[dict[str, float]]
 
     # Thermodynamic analysis
-    stability_changes: Dict[str, float]
-    conformational_state_changes: Dict[str, Any]
-    free_energy_changes: Dict[str, float]
+    stability_changes: dict[str, float]
+    conformational_state_changes: dict[str, Any]
+    free_energy_changes: dict[str, float]
 
     # Statistical significance
-    energy_change_significance: Dict[str, float]
-    conformational_population_changes: Dict[str, float]
+    energy_change_significance: dict[str, float]
+    conformational_population_changes: dict[str, float]
 
 
 @dataclass
@@ -167,15 +168,15 @@ class KineticsComparison:
 
     # Transition matrix differences
     transition_flux_changes: np.ndarray
-    pathway_probability_changes: Dict[str, float]
+    pathway_probability_changes: dict[str, float]
 
     # Metastable state analysis
     metastable_state_population_changes: np.ndarray
-    metastable_state_stability_changes: Dict[int, float]
+    metastable_state_stability_changes: dict[int, float]
 
     # Kinetic pathway analysis
-    critical_pathway_changes: List[Dict[str, Any]]
-    bottleneck_analysis: Dict[str, float]
+    critical_pathway_changes: list[dict[str, Any]]
+    bottleneck_analysis: dict[str, float]
 
 
 @dataclass
@@ -184,22 +185,22 @@ class AllostericComparison:
 
     # Communication efficiency differences
     efficiency_difference_matrix: np.ndarray
-    efficiency_change_statistics: Dict[str, float]
+    efficiency_change_statistics: dict[str, float]
 
     # Pathway analysis
-    pathway_disruption_analysis: List[Dict[str, Any]]
-    hotspot_ranking_changes: List[Dict[str, Any]]
+    pathway_disruption_analysis: list[dict[str, Any]]
+    hotspot_ranking_changes: list[dict[str, Any]]
 
     # Cross-chain communication (for multi-chain proteins)
-    cross_chain_communication_changes: Dict[str, float]
+    cross_chain_communication_changes: dict[str, float]
 
     # Drug resistance analysis (if applicable)
-    resistance_mechanism_analysis: Dict[str, Any]
-    binding_site_communication_changes: Dict[str, float]
+    resistance_mechanism_analysis: dict[str, Any]
+    binding_site_communication_changes: dict[str, float]
 
     # Statistical analysis
-    pathway_significance_tests: Dict[str, float]
-    hotspot_significance_changes: Dict[str, float]
+    pathway_significance_tests: dict[str, float]
+    hotspot_significance_changes: dict[str, float]
 
 
 @dataclass
@@ -207,7 +208,7 @@ class ComprehensiveDifferentialResults:
     """Complete differential analysis results"""
 
     # Metadata
-    simulation_names: Tuple[str, str]
+    simulation_names: tuple[str, str]
     analysis_timestamp: str
     config: DifferentialConfig
 
@@ -216,16 +217,16 @@ class ComprehensiveDifferentialResults:
     simulation2_results: MDSimulation
 
     # Comparative analysis results
-    network_comparison: Optional[NetworkComparison]
-    dynamics_comparison: Optional[DynamicsComparison]
-    energetics_comparison: Optional[EnergeticsComparison]
-    kinetics_comparison: Optional[KineticsComparison]
-    allosteric_comparison: Optional[AllostericComparison]
+    network_comparison: NetworkComparison | None
+    dynamics_comparison: DynamicsComparison | None
+    energetics_comparison: EnergeticsComparison | None
+    kinetics_comparison: KineticsComparison | None
+    allosteric_comparison: AllostericComparison | None
 
     # Summary statistics
-    overall_similarity_scores: Dict[str, float]
-    most_significant_changes: Dict[str, List[Dict[str, Any]]]
-    executive_summary: Dict[str, Any]
+    overall_similarity_scores: dict[str, float]
+    most_significant_changes: dict[str, list[dict[str, Any]]]
+    executive_summary: dict[str, Any]
 
 
 # =====================================================
@@ -364,7 +365,7 @@ class DifferentialAnalyzer:
         sim2_trajectory: str,
         sim2_name: str,
         analysis_config: AnalysisConfig,
-    ) -> Tuple[MDSimulation, MDSimulation]:
+    ) -> tuple[MDSimulation, MDSimulation]:
         """Run complete individual analyses on both simulations"""
 
         # Import the main analysis class
@@ -408,7 +409,7 @@ class DifferentialAnalyzer:
 
         return sim1_results, sim2_results
 
-    def _run_comparative_analyses(self, sim1: MDSimulation, sim2: MDSimulation) -> Dict[str, Any]:
+    def _run_comparative_analyses(self, sim1: MDSimulation, sim2: MDSimulation) -> dict[str, Any]:
         """Perform all comparative analyses"""
 
         comparison_results = {}
@@ -450,7 +451,7 @@ class DifferentialAnalyzer:
 
         return comparison_results
 
-    def _perform_statistical_analysis(self, comparison_results: Dict[str, Any]):
+    def _perform_statistical_analysis(self, comparison_results: dict[str, Any]):
         """Perform statistical significance testing on comparison results"""
 
         if not SCIPY_AVAILABLE:
@@ -469,8 +470,8 @@ class DifferentialAnalyzer:
         self,
         sim1: MDSimulation,
         sim2: MDSimulation,
-        comparison_results: Dict[str, Any],
-        sim_names: Tuple[str, str],
+        comparison_results: dict[str, Any],
+        sim_names: tuple[str, str],
     ) -> ComprehensiveDifferentialResults:
         """Compile all results into comprehensive differential results object"""
 
@@ -490,7 +491,7 @@ class DifferentialAnalyzer:
             executive_summary=self._generate_executive_summary(comparison_results, sim_names),
         )
 
-    def _calculate_similarity_scores(self, comparison_results: Dict[str, Any]) -> Dict[str, float]:
+    def _calculate_similarity_scores(self, comparison_results: dict[str, Any]) -> dict[str, float]:
         """Calculate overall similarity scores between simulations"""
 
         similarity_scores = {}
@@ -510,8 +511,8 @@ class DifferentialAnalyzer:
         return similarity_scores
 
     def _identify_most_significant_changes(
-        self, comparison_results: Dict[str, Any]
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        self, comparison_results: dict[str, Any]
+    ) -> dict[str, list[dict[str, Any]]]:
         """Identify the most significant changes across all analysis types"""
 
         significant_changes = {}
@@ -525,8 +526,8 @@ class DifferentialAnalyzer:
         return significant_changes
 
     def _generate_executive_summary(
-        self, comparison_results: Dict[str, Any], sim_names: Tuple[str, str]
-    ) -> Dict[str, Any]:
+        self, comparison_results: dict[str, Any], sim_names: tuple[str, str]
+    ) -> dict[str, Any]:
         """Generate executive summary of differential analysis"""
 
         return {
@@ -792,7 +793,7 @@ class DifferentialAnalyzer:
             ax.grid(True, alpha=0.3)
 
             # Add value labels on bars
-            for bar, score in zip(bars, scores):
+            for bar, score in zip(bars, scores, strict=False):
                 height = bar.get_height()
                 ax.text(
                     bar.get_x() + bar.get_width() / 2.0,
@@ -824,7 +825,7 @@ class DifferentialAnalyzer:
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MD-Compare Differential Analysis Report</title>
+    <title>confdelta Differential Analysis Report</title>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
         .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
@@ -838,10 +839,10 @@ class DifferentialAnalyzer:
 </head>
 <body>
     <div class="header">
-        <h1>MD-Compare Differential Analysis Report</h1>
+        <h1>confdelta Differential Analysis Report</h1>
         <p><strong>Comparison:</strong> {results.simulation_names[0]} vs {results.simulation_names[1]}</p>
         <p><strong>Analysis Date:</strong> {results.analysis_timestamp}</p>
-        <p><strong>Software:</strong> MD-Compare v1.5.0</p>
+        <p><strong>Software:</strong> confdelta v{__version__}</p>
     </div>
 
     <div class="section">
@@ -944,7 +945,7 @@ class NetworkComparator:
 
     def _compare_topology(
         self, graph1, graph2
-    ) -> Tuple[List[str], List[str], List[Tuple], List[Tuple], Dict]:
+    ) -> tuple[list[str], list[str], list[tuple], list[tuple], dict]:
         """Compare basic network topology (nodes and edges)"""
 
         # Compare nodes
@@ -981,7 +982,7 @@ class NetworkComparator:
 
     def _compare_centralities(
         self, net1, net2
-    ) -> Tuple[Dict[str, Dict[str, float]], Dict[str, List[str]]]:
+    ) -> tuple[dict[str, dict[str, float]], dict[str, list[str]]]:
         """Compare centrality measures between networks"""
 
         centrality_metrics = ["degree", "betweenness", "closeness", "eigenvector"]
@@ -1021,7 +1022,7 @@ class NetworkComparator:
 
         return centrality_changes, centrality_ranking_changes
 
-    def _compare_communities(self, net1, net2) -> Tuple[Dict[str, Any], float]:
+    def _compare_communities(self, net1, net2) -> tuple[dict[str, Any], float]:
         """Compare community structure between networks"""
 
         community_changes = {}
@@ -1065,7 +1066,7 @@ class NetworkComparator:
 
         return community_changes, modularity_change
 
-    def _compare_global_properties(self, graph1, graph2) -> Dict[str, float]:
+    def _compare_global_properties(self, graph1, graph2) -> dict[str, float]:
         """Compare global network properties"""
 
         try:
@@ -1102,7 +1103,7 @@ class NetworkComparator:
 
         return properties
 
-    def _test_network_significance(self, graph1, graph2) -> Dict[str, float]:
+    def _test_network_significance(self, graph1, graph2) -> dict[str, float]:
         """Statistical significance testing for network differences"""
 
         # Placeholder for network-specific statistical tests
@@ -1177,8 +1178,8 @@ class DynamicsComparator:
         )
 
     def _compare_dccm_matrices(
-        self, dyn1: Dict, dyn2: Dict
-    ) -> Tuple[np.ndarray, List[Tuple], Dict]:
+        self, dyn1: dict, dyn2: dict
+    ) -> tuple[np.ndarray, list[tuple], dict]:
         """Compare Dynamic Cross-Correlation Matrices"""
 
         # Extract DCCM matrices
@@ -1227,8 +1228,8 @@ class DynamicsComparator:
         return dccm_diff, significant_changes, regional_changes
 
     def _analyze_regional_correlation_changes(
-        self, dccm_diff: np.ndarray, dyn1: Dict, dyn2: Dict
-    ) -> Dict[str, Dict[str, float]]:
+        self, dccm_diff: np.ndarray, dyn1: dict, dyn2: dict
+    ) -> dict[str, dict[str, float]]:
         """Analyze correlation changes by protein regions/secondary structure"""
 
         # This would require secondary structure information
@@ -1257,7 +1258,7 @@ class DynamicsComparator:
 
         return regional_changes
 
-    def _compare_pca_results(self, dyn1: Dict, dyn2: Dict) -> Tuple[np.ndarray, np.ndarray, Dict]:
+    def _compare_pca_results(self, dyn1: dict, dyn2: dict) -> tuple[np.ndarray, np.ndarray, dict]:
         """Compare Principal Component Analysis results"""
 
         # Extract PCA data
@@ -1301,8 +1302,8 @@ class DynamicsComparator:
         return variance_changes, eigenvector_similarities, pc_shifts
 
     def _perform_correlation_statistics(
-        self, dyn1: Dict, dyn2: Dict, dccm_diff: np.ndarray
-    ) -> Tuple[np.ndarray, List[Tuple], Dict]:
+        self, dyn1: dict, dyn2: dict, dccm_diff: np.ndarray
+    ) -> tuple[np.ndarray, list[tuple], dict]:
         """Perform statistical significance testing for correlation changes"""
 
         if not SCIPY_AVAILABLE or not self.config.perform_statistical_tests:
@@ -1428,7 +1429,7 @@ class EnergeticsComparator:
             conformational_population_changes=population_changes,
         )
 
-    def _compare_energy_surfaces(self, landscape1: Dict, landscape2: Dict) -> Optional[np.ndarray]:
+    def _compare_energy_surfaces(self, landscape1: dict, landscape2: dict) -> np.ndarray | None:
         """Compare energy landscape surfaces"""
 
         # Extract energy grids
@@ -1452,7 +1453,7 @@ class EnergeticsComparator:
 
         return energy_diff
 
-    def _compare_energy_minima(self, landscape1: Dict, landscape2: Dict) -> List[Dict[str, Any]]:
+    def _compare_energy_minima(self, landscape1: dict, landscape2: dict) -> list[dict[str, Any]]:
         """Compare energy minima between landscapes"""
 
         minima1 = landscape1.get("minima", [])
@@ -1497,8 +1498,8 @@ class EnergeticsComparator:
         return minima_comparison
 
     def _compare_energy_barriers(
-        self, landscape1: Dict, landscape2: Dict
-    ) -> List[Dict[str, float]]:
+        self, landscape1: dict, landscape2: dict
+    ) -> list[dict[str, float]]:
         """Compare energy barriers between conformational states"""
 
         # Extract transition barrier information
@@ -1530,7 +1531,7 @@ class EnergeticsComparator:
 
         return barrier_changes
 
-    def _analyze_stability_changes(self, landscape1: Dict, landscape2: Dict) -> Dict[str, float]:
+    def _analyze_stability_changes(self, landscape1: dict, landscape2: dict) -> dict[str, float]:
         """Analyze thermodynamic stability changes"""
 
         # Calculate global stability metrics
@@ -1549,7 +1550,7 @@ class EnergeticsComparator:
 
         return stability_changes
 
-    def _analyze_conformational_changes(self, landscape1: Dict, landscape2: Dict) -> Dict[str, Any]:
+    def _analyze_conformational_changes(self, landscape1: dict, landscape2: dict) -> dict[str, Any]:
         """Analyze conformational state changes"""
 
         conformational_changes = {
@@ -1562,8 +1563,8 @@ class EnergeticsComparator:
         return conformational_changes
 
     def _calculate_free_energy_changes(
-        self, landscape1: Dict, landscape2: Dict
-    ) -> Dict[str, float]:
+        self, landscape1: dict, landscape2: dict
+    ) -> dict[str, float]:
         """Calculate free energy changes"""
 
         # Extract temperature
@@ -1602,13 +1603,13 @@ class EnergeticsComparator:
         except Exception:
             return 0.0
 
-    def _test_energy_significance(self, landscape1: Dict, landscape2: Dict) -> Dict[str, float]:
+    def _test_energy_significance(self, landscape1: dict, landscape2: dict) -> dict[str, float]:
         """Statistical significance testing for energy changes"""
 
         # Placeholder for energy-specific statistical tests
         return {"energy_change_pvalue": 0.05}
 
-    def _test_population_changes(self, landscape1: Dict, landscape2: Dict) -> Dict[str, float]:
+    def _test_population_changes(self, landscape1: dict, landscape2: dict) -> dict[str, float]:
         """Test significance of population changes"""
 
         # Placeholder for population significance tests
@@ -1682,7 +1683,7 @@ class KineticsComparator:
             bottleneck_analysis=bottleneck_analysis,
         )
 
-    def _compare_timescales(self, msm1: Dict, msm2: Dict) -> Tuple[np.ndarray, np.ndarray, float]:
+    def _compare_timescales(self, msm1: dict, msm2: dict) -> tuple[np.ndarray, np.ndarray, float]:
         """Compare implied timescales"""
 
         timescales1 = msm1.get("implied_timescales", np.array([]))
@@ -1712,7 +1713,7 @@ class KineticsComparator:
 
         return timescale_changes, timescale_ratios, dominant_change
 
-    def _compare_transition_fluxes(self, msm1: Dict, msm2: Dict) -> np.ndarray:
+    def _compare_transition_fluxes(self, msm1: dict, msm2: dict) -> np.ndarray:
         """Compare transition flux matrices"""
 
         transition_matrix1 = msm1.get("transition_matrix")
@@ -1737,7 +1738,7 @@ class KineticsComparator:
 
         return flux_changes
 
-    def _compare_pathway_probabilities(self, msm1: Dict, msm2: Dict) -> Dict[str, float]:
+    def _compare_pathway_probabilities(self, msm1: dict, msm2: dict) -> dict[str, float]:
         """Compare dominant pathway probabilities"""
 
         pathways1 = msm1.get("dominant_pathways", [])
@@ -1746,7 +1747,7 @@ class KineticsComparator:
         pathway_changes = {}
 
         # Compare pathway probabilities
-        for i, (path1, path2) in enumerate(zip(pathways1[:5], pathways2[:5])):
+        for i, (path1, path2) in enumerate(zip(pathways1[:5], pathways2[:5], strict=False)):
             prob1 = path1.get("probability", 0.0)
             prob2 = path2.get("probability", 0.0)
             prob_change = prob2 - prob1
@@ -1761,7 +1762,7 @@ class KineticsComparator:
 
         return pathway_changes
 
-    def _compare_metastable_states(self, msm1: Dict, msm2: Dict) -> Tuple[np.ndarray, Dict]:
+    def _compare_metastable_states(self, msm1: dict, msm2: dict) -> tuple[np.ndarray, dict]:
         """Compare metastable state populations and stabilities"""
 
         populations1 = msm1.get("metastable_populations", np.array([]))
@@ -1795,7 +1796,7 @@ class KineticsComparator:
 
         return population_changes, stability_changes
 
-    def _analyze_critical_pathways(self, msm1: Dict, msm2: Dict) -> List[Dict[str, Any]]:
+    def _analyze_critical_pathways(self, msm1: dict, msm2: dict) -> list[dict[str, Any]]:
         """Analyze changes in critical kinetic pathways"""
 
         critical_pathways = []
@@ -1805,7 +1806,7 @@ class KineticsComparator:
             transitions1 = msm1["critical_transitions"][:5]  # Top 5
             transitions2 = msm2["critical_transitions"][:5]
 
-            for i, (trans1, trans2) in enumerate(zip(transitions1, transitions2)):
+            for i, (trans1, trans2) in enumerate(zip(transitions1, transitions2, strict=False)):
                 flux_change = trans2.get("flux", 0) - trans1.get("flux", 0)
                 rate_change = trans2.get("rate", 0) - trans1.get("rate", 0)
 
@@ -1830,7 +1831,7 @@ class KineticsComparator:
 
         return critical_pathways
 
-    def _analyze_kinetic_bottlenecks(self, msm1: Dict, msm2: Dict) -> Dict[str, float]:
+    def _analyze_kinetic_bottlenecks(self, msm1: dict, msm2: dict) -> dict[str, float]:
         """Analyze changes in kinetic bottlenecks"""
 
         bottleneck_analysis = {
@@ -1941,8 +1942,8 @@ class AllostericComparator:
         )
 
     def _compare_efficiency_matrices(
-        self, ap1: Dict, ap2: Dict
-    ) -> Tuple[np.ndarray, Dict[str, float]]:
+        self, ap1: dict, ap2: dict
+    ) -> tuple[np.ndarray, dict[str, float]]:
         """Compare communication efficiency matrices between simulations"""
 
         # Extract efficiency matrices
@@ -1983,7 +1984,7 @@ class AllostericComparator:
 
         return diff_matrix, stats
 
-    def _reconstruct_efficiency_matrix(self, ap: Dict) -> Optional[np.ndarray]:
+    def _reconstruct_efficiency_matrix(self, ap: dict) -> np.ndarray | None:
         """Reconstruct efficiency matrix from communication efficiency data"""
 
         comm_eff = ap.get("communication_efficiency", {})
@@ -2021,7 +2022,7 @@ class AllostericComparator:
 
         return matrix
 
-    def _analyze_pathway_disruption(self, ap1: Dict, ap2: Dict) -> List[Dict[str, Any]]:
+    def _analyze_pathway_disruption(self, ap1: dict, ap2: dict) -> list[dict[str, Any]]:
         """Analyze disruption of specific allosteric pathways"""
 
         pathways1 = ap1.get("pathways", [])
@@ -2070,7 +2071,7 @@ class AllostericComparator:
 
         return disruption_analysis
 
-    def _calculate_pathway_similarity(self, pathway1: Dict, pathway2: Dict) -> float:
+    def _calculate_pathway_similarity(self, pathway1: dict, pathway2: dict) -> float:
         """Calculate similarity between two pathways"""
 
         path1 = set(pathway1.get("path", []))
@@ -2085,7 +2086,7 @@ class AllostericComparator:
 
         return intersection / union if union > 0 else 0.0
 
-    def _calculate_pathway_disruption(self, pathway1: Dict, pathway2: Dict) -> float:
+    def _calculate_pathway_disruption(self, pathway1: dict, pathway2: dict) -> float:
         """Calculate disruption score for a pathway"""
 
         # Efficiency change (primary metric)
@@ -2103,7 +2104,7 @@ class AllostericComparator:
 
         return disruption_score
 
-    def _compare_hotspot_rankings(self, ap1: Dict, ap2: Dict) -> List[Dict[str, Any]]:
+    def _compare_hotspot_rankings(self, ap1: dict, ap2: dict) -> list[dict[str, Any]]:
         """Compare allosteric hotspot rankings between simulations"""
 
         hotspots1 = ap1.get("allosteric_hotspots", [])
@@ -2164,7 +2165,7 @@ class AllostericComparator:
 
         return ranking_changes
 
-    def _analyze_cross_chain_communication(self, ap1: Dict, ap2: Dict) -> Dict[str, float]:
+    def _analyze_cross_chain_communication(self, ap1: dict, ap2: dict) -> dict[str, float]:
         """Analyze changes in cross-chain communication (for multi-chain proteins)"""
 
         # Get efficiency matrices
@@ -2216,7 +2217,7 @@ class AllostericComparator:
 
         return cross_chain_changes
 
-    def _analyze_resistance_mechanisms(self, ap1: Dict, ap2: Dict) -> Dict[str, Any]:
+    def _analyze_resistance_mechanisms(self, ap1: dict, ap2: dict) -> dict[str, Any]:
         """Analyze drug resistance mechanisms based on communication changes"""
 
         # This is a specialized analysis for drug resistance studies
@@ -2237,7 +2238,7 @@ class AllostericComparator:
 
         return resistance_analysis
 
-    def _analyze_binding_site_communication(self, ap1: Dict, ap2: Dict) -> Dict[str, float]:
+    def _analyze_binding_site_communication(self, ap1: dict, ap2: dict) -> dict[str, float]:
         """Analyze changes in binding site communication"""
 
         # Placeholder for binding site specific analysis
@@ -2249,7 +2250,7 @@ class AllostericComparator:
             "binding_pocket_accessibility_change": 0.0,
         }
 
-    def _test_pathway_significance(self, ap1: Dict, ap2: Dict) -> Dict[str, float]:
+    def _test_pathway_significance(self, ap1: dict, ap2: dict) -> dict[str, float]:
         """Statistical significance testing for pathway changes"""
 
         # Placeholder for statistical testing
@@ -2257,7 +2258,7 @@ class AllostericComparator:
 
         return {}
 
-    def _test_hotspot_significance(self, ap1: Dict, ap2: Dict) -> Dict[str, float]:
+    def _test_hotspot_significance(self, ap1: dict, ap2: dict) -> dict[str, float]:
         """Statistical significance testing for hotspot ranking changes"""
 
         # Placeholder for hotspot significance testing

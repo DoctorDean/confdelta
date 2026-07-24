@@ -1,4 +1,9 @@
-"""Tests for mdcompare.msm_backends (PyEMMA / deeptime MSM abstraction)."""
+"""Tests for confdelta.msm_backends (deeptime MSM adapter).
+
+PyEMMA support was removed in 0.1.0; deeptime is the only backend. The
+selection tests below pin that contract, including the deprecation path for
+callers that still ask for PyEMMA explicitly.
+"""
 
 from __future__ import annotations
 
@@ -7,10 +12,9 @@ import importlib.util
 import numpy as np
 import pytest
 
-from mdcompare import msm_backends as mb
+from confdelta import msm_backends as mb
 
 HAS_DEEPTIME = importlib.util.find_spec("deeptime") is not None
-HAS_PYEMMA = importlib.util.find_spec("pyemma") is not None
 
 requires_deeptime = pytest.mark.skipif(not HAS_DEEPTIME, reason="deeptime not installed")
 
@@ -21,14 +25,8 @@ requires_deeptime = pytest.mark.skipif(not HAS_DEEPTIME, reason="deeptime not in
 
 
 class TestSelectBackend:
-    def test_auto_prefers_pyemma_then_deeptime(self):
-        chosen = mb.select_backend("auto")
-        if HAS_PYEMMA:
-            assert chosen == "pyemma"
-        elif HAS_DEEPTIME:
-            assert chosen == "deeptime"
-        else:
-            assert chosen is None
+    def test_auto_resolves_to_deeptime(self):
+        assert mb.select_backend("auto") == ("deeptime" if HAS_DEEPTIME else None)
 
     def test_none_behaves_like_auto(self):
         assert mb.select_backend(None) == mb.select_backend("auto")
@@ -41,16 +39,22 @@ class TestSelectBackend:
         # Should not raise; resolves via auto.
         assert mb.select_backend("nonsense") == mb.select_backend("auto")
 
-    def test_unavailable_explicit_backend_falls_back(self):
-        # Requesting a backend that isn't installed must not raise; it
-        # should fall through to auto-selection.
-        if not HAS_PYEMMA:
+    def test_pyemma_request_is_redirected_not_honoured(self, caplog):
+        """PyEMMA was removed; asking for it must warn and use deeptime."""
+        with caplog.at_level("WARNING", logger="confdelta"):
             assert mb.select_backend("pyemma") == mb.select_backend("auto")
+        assert any("PyEMMA support was removed" in r.message for r in caplog.records)
+
+    def test_pyemma_availability_is_no_longer_exposed(self):
+        """The PYEMMA_AVAILABLE flag was part of the pre-0.1.0 surface."""
+        assert not hasattr(mb, "PYEMMA_AVAILABLE")
+
+    def test_msm_available_tracks_deeptime_alone(self):
+        assert mb.MSM_AVAILABLE is mb.DEEPTIME_AVAILABLE
 
     def test_backend_report_structure(self):
         report = mb.backend_report()
-        assert set(report) == {"pyemma", "deeptime", "selected"}
-        assert isinstance(report["pyemma"], bool)
+        assert set(report) == {"deeptime", "selected"}
         assert isinstance(report["deeptime"], bool)
 
 

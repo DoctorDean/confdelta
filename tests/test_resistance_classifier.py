@@ -1,11 +1,11 @@
-"""Tests for mdcompare.experimental.resistance_classifier."""
+"""Tests for confdelta.experimental.resistance_classifier."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from mdcompare.experimental.resistance_classifier import (
+from confdelta.experimental.resistance_classifier import (
     ClassifierReport,
     predict_resistance,
     prepare_ml_features,

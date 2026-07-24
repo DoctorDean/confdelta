@@ -1,18 +1,18 @@
 """Drug-resistance classification from MD-derived descriptors.
 
-This module turns per-(sub-)trajectory analysis output from MD-Compare into
+This module turns per-(sub-)trajectory analysis output from confdelta into
 a feature matrix and trains supervised classifiers to distinguish
 drug-*sensitive* from drug-*resistant* protein variants.
 
 It is **experimental**: the feature set and API may change. The core
 RandomForest / SVM path depends only on scikit-learn (already a core
-MD-Compare dependency). The optional graph-neural-network path depends on
+confdelta dependency). The optional graph-neural-network path depends on
 ``torch`` + ``torch_geometric`` and is imported lazily, so importing this
 module never requires a deep-learning stack.
 
 Typical use
 -----------
->>> from mdcompare.experimental.resistance_classifier import (
+>>> from confdelta.experimental.resistance_classifier import (
 ...     prepare_ml_features, train_resistance_classifier)
 >>> X, y, names = prepare_ml_features(per_traj_results, labels=phenotypes)
 >>> report = train_resistance_classifier(X, y)
@@ -23,12 +23,13 @@ Typical use
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger("mdcompare")
+logger = logging.getLogger("confdelta")
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +139,7 @@ def prepare_ml_features(
     per_trajectory_results: dict[str, dict[str, Any]],
     labels: Sequence[int] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """Assemble a feature matrix from per-trajectory MD-Compare results.
+    """Assemble a feature matrix from per-trajectory confdelta results.
 
     Parameters
     ----------
@@ -343,7 +344,7 @@ def graph_neural_network_analysis(network_results: dict[str, dict[str, Any]]):
     """Convert residue networks into PyTorch-Geometric graphs.
 
     This is an **optional** feature requiring ``torch`` and
-    ``torch_geometric`` (not MD-Compare dependencies). The imports happen
+    ``torch_geometric`` (not confdelta dependencies). The imports happen
     inside the function so the rest of this module is usable without a
     deep-learning stack.
 

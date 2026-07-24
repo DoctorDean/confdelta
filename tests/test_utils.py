@@ -1,10 +1,10 @@
-"""Tests for mdcompare.utils — network metrics, preprocessing, persistence."""
+"""Tests for confdelta.utils — network metrics, preprocessing, persistence."""
 
 from __future__ import annotations
 
 import numpy as np
 
-from mdcompare import utils
+from confdelta import utils
 
 # ---------------------------------------------------------------------------
 # Network robustness / assortativity
@@ -128,7 +128,7 @@ class TestPerformanceMonitor:
 
 class TestConfigIO:
     def test_save_and_load_config(self, tmp_path):
-        from mdcompare.core import AnalysisConfig
+        from confdelta.core import AnalysisConfig
 
         cfg = AnalysisConfig(threshold=0.33, pca_components=7)
         path = tmp_path / "cfg.json"

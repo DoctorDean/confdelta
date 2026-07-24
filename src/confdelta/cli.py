@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-MD-Compare: Command-line interface for molecular dynamics comparison analysis
+confdelta: Command-line interface for molecular dynamics comparison analysis
 
 This script provides the main command-line interface for comparing molecular dynamics
 simulations using network analysis methods.
@@ -21,7 +21,7 @@ try:
     from .differential import DifferentialAnalyzer, DifferentialConfig
     from .utils import PerformanceMonitor, save_analysis_config
 except ImportError:
-    print("Error: MD-Compare core modules not found. Ensure proper installation.")
+    print("Error: confdelta core modules not found. Ensure proper installation.")
     sys.exit(1)
 
 
@@ -96,7 +96,7 @@ def run_single_analysis(args):
 
     analysis_config = create_analysis_config_from_args(args)
 
-    # Initialize MD-Compare workflow
+    # Initialize confdelta workflow
     md_compare = MDCompare(analysis_config, args.output)
 
     # Performance monitoring
@@ -182,7 +182,7 @@ def run_comparison_analysis(args):
             if hasattr(analysis_config, key):
                 setattr(analysis_config, key, value)
 
-    # Initialize MD-Compare workflow
+    # Initialize confdelta workflow
     md_compare = MDCompare(analysis_config, args.output)
 
     # Performance monitoring
@@ -456,41 +456,41 @@ def create_example_config(output_path: str):
 
 
 def main():
-    """Main entry point for MD-Compare CLI"""
+    """Main entry point for confdelta CLI"""
 
     # Main parser
     parser = argparse.ArgumentParser(
-        description="MD-Compare: Comprehensive toolkit for comparing molecular dynamics simulations",
+        description="confdelta: statistical comparison of protein conformational ensembles",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
 
   # Single simulation analysis
-  md-compare single -t system.pdb -x trajectory.xtc -n my_sim -o results/
+  confdelta single -t system.pdb -x trajectory.xtc -n my_sim -o results/
 
   # Multiple simulation comparison
-  md-compare compare -c simulations.json -o comparison_results/
+  confdelta compare -c simulations.json -o comparison_results/
 
   # Basic differential analysis (legacy)
-  md-compare diff -t1 wt.pdb -x1 wt.xtc -n1 wildtype \\
+  confdelta diff -t1 wt.pdb -x1 wt.xtc -n1 wildtype \\
                   -t2 mut.pdb -x2 mut.xtc -n2 mutant -o diff_results/
 
   # Comprehensive differential analysis (recommended)
-  md-compare differential -t1 wt.pdb -x1 wt.xtc -n1 "Wild_Type" \\
+  confdelta differential -t1 wt.pdb -x1 wt.xtc -n1 "Wild_Type" \\
                          -t2 mut.pdb -x2 mut.xtc -n2 "V82A_Mutant" \\
                          -o hiv_wt_vs_v82a --statistical-tests --publication-figures \\
                          --allosteric-sources A_50 B_50 --allosteric-targets A_25 B_25
 
   # Drug resistance analysis with focused comparisons
-  md-compare differential -t1 hiv_apo.pdb -x1 apo.xtc -n1 "Apo_State" \\
+  confdelta differential -t1 hiv_apo.pdb -x1 apo.xtc -n1 "Apo_State" \\
                          -t2 hiv_inhibitor.pdb -x2 inhibitor.xtc -n2 "Inhibitor_Bound" \\
                          -o drug_binding_analysis --excel-export \\
                          --correlation-threshold 0.15 --efficiency-threshold 0.05
 
   # Generate example configuration
-  md-compare example-config -o example_simulations.json
+  confdelta example-config -o example_simulations.json
 
-For more information, visit: https://github.com/yourusername/md-compare
+For more information, visit: https://github.com/DoctorDean/confdelta
         """,
     )
 
@@ -506,7 +506,7 @@ For more information, visit: https://github.com/yourusername/md-compare
     )
     single_parser.add_argument("-n", "--name", required=True, help="Name for this simulation")
     single_parser.add_argument(
-        "-o", "--output", default="md_compare_results", help="Output directory"
+        "-o", "--output", default="confdelta_results", help="Output directory"
     )
     single_parser.add_argument(
         "--selection", default="protein and not name H*", help="Atom selection string"
@@ -701,7 +701,7 @@ For more information, visit: https://github.com/yourusername/md-compare
         "-c", "--config", required=True, help="JSON configuration file with simulation details"
     )
     compare_parser.add_argument(
-        "-o", "--output", default="md_compare_results", help="Output directory"
+        "-o", "--output", default="confdelta_results", help="Output directory"
     )
     compare_parser.add_argument(
         "--cutoff", type=float, default=4.5, help="Contact distance cutoff (Å)"
@@ -902,9 +902,7 @@ For more information, visit: https://github.com/yourusername/md-compare
         "-x2", "--trajectory2", required=True, help="Trajectory file for second simulation"
     )
     diff_parser.add_argument("-n2", "--sim2", required=True, help="Name for second simulation")
-    diff_parser.add_argument(
-        "-o", "--output", default="md_compare_results", help="Output directory"
-    )
+    diff_parser.add_argument("-o", "--output", default="confdelta_results", help="Output directory")
     diff_parser.add_argument(
         "--selection", default="protein and not name H*", help="Atom selection string"
     )

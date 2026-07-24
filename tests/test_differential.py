@@ -1,4 +1,4 @@
-"""Tests for mdcompare.differential — comparators and differential analysis.
+"""Tests for confdelta.differential — comparators and differential analysis.
 
 This replaces the original print-based test_differential_implementation.py
 script with proper pytest assertions.
@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from mdcompare.differential import (
+from confdelta.differential import (
     AllostericComparator,
     DifferentialAnalyzer,
     DifferentialConfig,
@@ -182,7 +182,7 @@ class TestAllostericComparator:
 
 def test_cli_exposes_differential_entrypoint():
     """The CLI module must expose the comprehensive differential runner."""
-    from mdcompare import cli
+    from confdelta import cli
 
     assert hasattr(cli, "run_comprehensive_differential_analysis")
     assert callable(cli.main)

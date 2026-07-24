@@ -1,6 +1,7 @@
 include README.md CHANGELOG.md LICENSE CONTRIBUTING.md
+include AUDIT.md DECISIONS.md IDEAS.md
 include requirements.txt
-recursive-include examples *.md *.json
-recursive-include docs *.md
+include src/confdelta/py.typed
+recursive-include docs *.md *.json
 recursive-include tests *.py
 global-exclude *.pyc __pycache__ *.so

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-MD-Compare Utilities
+confdelta Utilities
 
-This module contains utility functions and helper classes for the MD-Compare toolkit.
+This module contains utility functions and helper classes for the confdelta toolkit.
 """
 
 import signal
