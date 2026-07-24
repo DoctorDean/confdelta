@@ -113,7 +113,6 @@ class NetworkComparison:
 
     # Global network property changes
     network_property_changes: dict[str, float]
-    statistical_significance: dict[str, float]
 
 
 @dataclass
@@ -151,10 +150,6 @@ class EnergeticsComparison:
     stability_changes: dict[str, float]
     conformational_state_changes: dict[str, Any]
     free_energy_changes: dict[str, float]
-
-    # Statistical significance
-    energy_change_significance: dict[str, float]
-    conformational_population_changes: dict[str, float]
 
 
 @dataclass
@@ -197,10 +192,6 @@ class AllostericComparison:
     # Drug resistance analysis (if applicable)
     resistance_mechanism_analysis: dict[str, Any]
     binding_site_communication_changes: dict[str, float]
-
-    # Statistical analysis
-    pathway_significance_tests: dict[str, float]
-    hotspot_significance_changes: dict[str, float]
 
 
 @dataclass
@@ -762,11 +753,6 @@ class NetworkComparator:
         # Compare global network properties
         network_property_changes = self._compare_global_properties(graph1, graph2)
 
-        # Statistical significance testing
-        statistical_significance = {}
-        if self.config.perform_statistical_tests and SCIPY_AVAILABLE:
-            statistical_significance = self._test_network_significance(graph1, graph2)
-
         return NetworkComparison(
             nodes_added=nodes_added,
             nodes_removed=nodes_removed,
@@ -778,7 +764,6 @@ class NetworkComparator:
             community_changes=community_changes,
             modularity_change=modularity_change,
             network_property_changes=network_property_changes,
-            statistical_significance=statistical_significance,
         )
 
     def _compare_topology(
@@ -941,20 +926,6 @@ class NetworkComparator:
 
         return properties
 
-    def _test_network_significance(self, graph1, graph2) -> dict[str, float]:
-        """Statistical significance testing for network differences"""
-
-        # Placeholder for network-specific statistical tests
-        # Could implement permutation tests, graph comparison metrics, etc.
-
-        significance_tests = {
-            "topology_change_pvalue": 0.05,  # Placeholder
-            "centrality_change_pvalue": 0.01,  # Placeholder
-            "community_change_pvalue": 0.1,  # Placeholder
-        }
-
-        return significance_tests
-
     def _create_empty_network_comparison(self) -> NetworkComparison:
         """Create empty comparison result when data is unavailable"""
 
@@ -969,7 +940,6 @@ class NetworkComparator:
             community_changes={},
             modularity_change=0.0,
             network_property_changes={},
-            statistical_significance={},
         )
 
 
@@ -1248,14 +1218,6 @@ class EnergeticsComparator:
         # Free energy changes
         free_energy_changes = self._calculate_free_energy_changes(landscape1, landscape2)
 
-        # Statistical significance
-        energy_significance = {}
-        population_changes = {}
-
-        if self.config.perform_statistical_tests and SCIPY_AVAILABLE:
-            energy_significance = self._test_energy_significance(landscape1, landscape2)
-            population_changes = self._test_population_changes(landscape1, landscape2)
-
         return EnergeticsComparison(
             energy_difference_surface=energy_diff_surface,
             minima_comparison=minima_comparison,
@@ -1263,8 +1225,6 @@ class EnergeticsComparator:
             stability_changes=stability_changes,
             conformational_state_changes=conformational_changes,
             free_energy_changes=free_energy_changes,
-            energy_change_significance=energy_significance,
-            conformational_population_changes=population_changes,
         )
 
     def _compare_energy_surfaces(self, landscape1: dict, landscape2: dict) -> np.ndarray | None:
@@ -1441,18 +1401,6 @@ class EnergeticsComparator:
         except Exception:
             return 0.0
 
-    def _test_energy_significance(self, landscape1: dict, landscape2: dict) -> dict[str, float]:
-        """Statistical significance testing for energy changes"""
-
-        # Placeholder for energy-specific statistical tests
-        return {"energy_change_pvalue": 0.05}
-
-    def _test_population_changes(self, landscape1: dict, landscape2: dict) -> dict[str, float]:
-        """Test significance of population changes"""
-
-        # Placeholder for population significance tests
-        return {"population_change_pvalue": 0.1}
-
     def _create_empty_energetics_comparison(self) -> EnergeticsComparison:
         """Create empty comparison result when data is unavailable"""
 
@@ -1463,8 +1411,6 @@ class EnergeticsComparator:
             stability_changes={},
             conformational_state_changes={},
             free_energy_changes={},
-            energy_change_significance={},
-            conformational_population_changes={},
         )
 
 
@@ -1759,14 +1705,6 @@ class AllostericComparator:
         # Binding site communication changes
         binding_site_changes = self._analyze_binding_site_communication(ap1, ap2)
 
-        # Statistical significance testing
-        pathway_significance = {}
-        hotspot_significance = {}
-
-        if self.config.perform_statistical_tests and SCIPY_AVAILABLE:
-            pathway_significance = self._test_pathway_significance(ap1, ap2)
-            hotspot_significance = self._test_hotspot_significance(ap1, ap2)
-
         return AllostericComparison(
             efficiency_difference_matrix=efficiency_diff_matrix,
             efficiency_change_statistics=efficiency_stats,
@@ -1775,8 +1713,6 @@ class AllostericComparator:
             cross_chain_communication_changes=cross_chain_changes,
             resistance_mechanism_analysis=resistance_analysis,
             binding_site_communication_changes=binding_site_changes,
-            pathway_significance_tests=pathway_significance,
-            hotspot_significance_changes=hotspot_significance,
         )
 
     def _compare_efficiency_matrices(
@@ -2088,21 +2024,6 @@ class AllostericComparator:
             "binding_pocket_accessibility_change": 0.0,
         }
 
-    def _test_pathway_significance(self, ap1: dict, ap2: dict) -> dict[str, float]:
-        """Statistical significance testing for pathway changes"""
-
-        # Placeholder for statistical testing
-        # Could implement permutation tests, bootstrap confidence intervals
-
-        return {}
-
-    def _test_hotspot_significance(self, ap1: dict, ap2: dict) -> dict[str, float]:
-        """Statistical significance testing for hotspot ranking changes"""
-
-        # Placeholder for hotspot significance testing
-
-        return {}
-
     def _create_empty_allosteric_comparison(self) -> AllostericComparison:
         """Create empty comparison result when data is unavailable"""
 
@@ -2114,8 +2035,6 @@ class AllostericComparator:
             cross_chain_communication_changes={},
             resistance_mechanism_analysis={},
             binding_site_communication_changes={},
-            pathway_significance_tests={},
-            hotspot_significance_changes={},
         )
 
 
