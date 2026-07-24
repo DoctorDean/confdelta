@@ -25,8 +25,9 @@ import sys
 from pathlib import Path
 
 from .config import ConfigError, load_config, write_example_config
-from .core import AnalysisConfig, MDCompare, SimulationConfig
+from .core import AnalysisConfig, MDCompare
 from .differential import DifferentialAnalyzer, DifferentialConfig
+from .ensemble import Ensemble, EnsembleError, EnsembleGroup
 from .utils import PerformanceMonitor, save_analysis_config
 
 _DESCRIPTIVE_ONLY_NOTICE = (
@@ -99,20 +100,13 @@ def run_single(args: argparse.Namespace) -> int:
     trajectory = _validate_readable_file(args.trajectory, "Trajectory")
     analysis_config, _ = _load_configs(args.config)
 
-    sim_config = SimulationConfig(
-        name=args.name,
-        topology=str(topology),
-        trajectory=str(trajectory),
-        description=f"Single-ensemble analysis: {args.name}",
-    )
+    ensemble = Ensemble.from_trajectory(str(topology), str(trajectory), name=args.name)
 
     workflow = MDCompare(analysis_config, args.output)
     monitor = PerformanceMonitor()
 
     monitor.start_step("Loading ensemble")
-    if not workflow.add_simulation(sim_config):
-        print(f"Failed to load ensemble: {args.name}", file=sys.stderr)
-        return 1
+    workflow.add_prepared_simulation(ensemble.to_simulation())
     monitor.end_step()
 
     monitor.start_step("Analysis")
@@ -148,19 +142,18 @@ def run_compare(args: argparse.Namespace) -> int:
 
     analysis_config, comparison_config = _load_configs(args.config)
 
+    group_a = EnsembleGroup.single(
+        Ensemble.from_trajectory(str(topology_a), trajectory_a, name=args.a_name)
+    )
+    group_b = EnsembleGroup.single(
+        Ensemble.from_trajectory(str(topology_b), trajectory_b, name=args.b_name)
+    )
+
     analyzer = DifferentialAnalyzer(comparison_config, args.output)
     monitor = PerformanceMonitor()
 
     monitor.start_step("Comparison")
-    results = analyzer.run_differential_analysis(
-        str(topology_a),
-        trajectory_a,
-        args.a_name,
-        str(topology_b),
-        trajectory_b,
-        args.b_name,
-        analysis_config,
-    )
+    results = analyzer.run_ensemble_comparison(group_a, group_b, analysis_config)
     monitor.end_step()
 
     computed = [
@@ -310,7 +303,7 @@ def main() -> int:
 
     try:
         return handlers[args.mode](args)
-    except (InputError, ConfigError) as exc:
+    except (InputError, ConfigError, EnsembleError) as exc:
         print(f"\nError: {exc}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
