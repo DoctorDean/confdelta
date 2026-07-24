@@ -33,49 +33,45 @@ __url__ = "https://github.com/DoctorDean/confdelta"
 __version_info__ = tuple(int(v) for v in __version__.split(".") if v.isdigit())
 
 # Import main classes for convenient top-level access.
-try:
-    from .core import (
-        AnalysisConfig,
-        MDComparator,
-        MDCompare,
-        MDSimulation,
-        NetworkAnalyzer,
-        NetworkMetrics,
-        OutputManager,
-        SimulationConfig,
-    )
-    from .differential import (
-        DifferentialAnalyzer,
-        DifferentialConfig,
-    )
+#
+# These imports are deliberately NOT wrapped in a try/except. An earlier
+# version swallowed ImportError here and silently dropped ten names from
+# __all__, so a downstream `from confdelta import DifferentialAnalyzer` failed
+# with a bare ImportError naming only the symbol, giving no clue which
+# dependency was missing or which extra to install. A missing core dependency
+# is a broken install, and it should say so at import time.
+from .core import (
+    AnalysisConfig,
+    MDComparator,
+    MDCompare,
+    MDSimulation,
+    NetworkAnalyzer,
+    NetworkMetrics,
+    OutputManager,
+    SimulationConfig,
+)
+from .differential import (
+    DifferentialAnalyzer,
+    DifferentialConfig,
+)
 
-    __all__ = [
-        "NetworkAnalyzer",
-        "AnalysisConfig",
-        "NetworkMetrics",
-        "MDSimulation",
-        "SimulationConfig",
-        "MDComparator",
-        "OutputManager",
-        "MDCompare",
-        "DifferentialAnalyzer",
-        "DifferentialConfig",
-        "check_dependencies",
-        "get_version_info",
-        "FEATURES",
-        "__version__",
-        "__version_info__",
-    ]
-except ImportError:
-    # Fallback for partial-install / development scenarios where heavy
-    # scientific dependencies may not yet be present.
-    __all__ = [
-        "check_dependencies",
-        "get_version_info",
-        "FEATURES",
-        "__version__",
-        "__version_info__",
-    ]
+__all__ = [
+    "NetworkAnalyzer",
+    "AnalysisConfig",
+    "NetworkMetrics",
+    "MDSimulation",
+    "SimulationConfig",
+    "MDComparator",
+    "OutputManager",
+    "MDCompare",
+    "DifferentialAnalyzer",
+    "DifferentialConfig",
+    "check_dependencies",
+    "get_version_info",
+    "FEATURES",
+    "__version__",
+    "__version_info__",
+]
 
 
 # ---------------------------------------------------------------------------

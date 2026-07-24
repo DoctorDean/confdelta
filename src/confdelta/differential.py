@@ -21,31 +21,6 @@ from .core import AnalysisConfig, MDSimulation
 
 logger = logging.getLogger("confdelta")
 
-try:
-    import pandas as pd  # noqa: F401
-
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-    logger.warning("pandas not available; some analysis features will be limited.")
-
-try:
-    import matplotlib.pyplot as plt  # noqa: F401
-    import seaborn as sns  # noqa: F401
-
-    PLOTTING_AVAILABLE = True
-except ImportError:
-    PLOTTING_AVAILABLE = False
-    logger.warning("matplotlib/seaborn not available; visualization features will be limited.")
-
-try:
-    import scipy.stats  # noqa: F401
-
-    SCIPY_AVAILABLE = True
-except ImportError:
-    SCIPY_AVAILABLE = False
-    logger.warning("scipy not available; statistical analysis features will be limited.")
-
 # =====================================================
 # DIFFERENTIAL ANALYSIS CONFIGURATION
 # =====================================================
@@ -461,13 +436,8 @@ class DifferentialAnalyzer:
         with open(self.output_dir / "comprehensive_differential_results.pkl", "wb") as f:
             pickle.dump(results, f)
 
-        # Generate CSV reports
-        if PANDAS_AVAILABLE:
-            self._create_csv_reports(results)
-
-        # Generate visualizations
-        if PLOTTING_AVAILABLE:
-            self._create_visualizations(results)
+        self._create_csv_reports(results)
+        self._create_visualizations(results)
 
         # Generate HTML report
         if self.config.create_html_report:
@@ -477,10 +447,6 @@ class DifferentialAnalyzer:
 
     def _create_csv_reports(self, results: ComprehensiveDifferentialResults):
         """Generate CSV reports for all comparison results"""
-
-        if not PANDAS_AVAILABLE:
-            print("  Warning: pandas not available, skipping CSV reports")
-            return
 
         try:
             # Network comparison CSV
@@ -607,10 +573,6 @@ class DifferentialAnalyzer:
 
     def _create_visualizations(self, results):
         """Create difference plots and visualizations"""
-
-        if not PLOTTING_AVAILABLE:
-            print("  Warning: matplotlib not available, skipping visualizations")
-            return
 
         try:
 

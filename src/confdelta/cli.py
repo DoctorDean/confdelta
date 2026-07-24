@@ -12,17 +12,13 @@ import json
 import sys
 from pathlib import Path
 
-try:
-    from .core import (
-        AnalysisConfig,
-        MDCompare,
-        SimulationConfig,
-    )
-    from .differential import DifferentialAnalyzer, DifferentialConfig
-    from .utils import PerformanceMonitor, save_analysis_config
-except ImportError:
-    print("Error: confdelta core modules not found. Ensure proper installation.")
-    sys.exit(1)
+from .core import (
+    AnalysisConfig,
+    MDCompare,
+    SimulationConfig,
+)
+from .differential import DifferentialAnalyzer, DifferentialConfig
+from .utils import PerformanceMonitor, save_analysis_config
 
 
 def create_simulation_config_from_args(

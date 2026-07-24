@@ -10,49 +10,32 @@ MD simulations using various network analysis methods.
 import json
 import logging
 import pickle
-import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# Every import below is a declared core dependency of confdelta, so none of
+# them is guarded. They were previously wrapped in try/except blocks that
+# either called sys.exit(1) -- terminating the *host process* on `import
+# confdelta`, which is indefensible in a library other tools import -- or
+# swallowed the error and left names such as `fcluster`, `gaussian_filter`,
+# `SpectralClustering` and even `defaultdict` undefined, so the failure
+# resurfaced much later as an unrelated NameError.
+import matplotlib.pyplot as plt  # noqa: F401
+import MDAnalysis as mda
+import networkx as nx
 import numpy as np
+import pandas as pd  # noqa: F401
+import seaborn as sns  # noqa: F401
+from MDAnalysis.lib.distances import capped_distance, distance_array
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.ndimage import gaussian_filter
+from scipy.spatial.distance import squareform
+from sklearn.cluster import SpectralClustering
 
 logger = logging.getLogger("confdelta")
-
-try:
-    import MDAnalysis as mda
-    from MDAnalysis.lib.distances import capped_distance, distance_array
-except ImportError:
-    print("Error: MDAnalysis is required.")
-    sys.exit(1)
-
-try:
-    import networkx as nx
-except ImportError:
-    print("Error: networkx is required.")
-    sys.exit(1)
-
-try:
-    from collections import defaultdict
-
-    import matplotlib.pyplot as plt  # noqa: F401
-    import seaborn as sns  # noqa: F401
-    from scipy.cluster.hierarchy import fcluster, linkage
-    from scipy.ndimage import gaussian_filter
-    from scipy.spatial.distance import squareform
-    from sklearn.cluster import SpectralClustering
-
-    # Data export
-    try:
-        import pandas as pd  # noqa: F401
-
-        PANDAS_AVAILABLE = True
-    except ImportError:
-        PANDAS_AVAILABLE = False
-        logger.warning("pandas not available; CSV export will be limited.")
-except ImportError:
-    logger.warning("scipy, matplotlib, seaborn, or sklearn not available; some features limited.")
 
 # Markov State Model backend detection.
 #
@@ -3869,40 +3852,37 @@ class OutputManager:
                     np.save(msm_dir / f"{prefix}_transition_matrix.npy", T_matrix)
 
                     # Save transition matrix as CSV for Excel viewing
-                    if PANDAS_AVAILABLE:
-                        try:
-                            import pandas as pd
+                    try:
+                        import pandas as pd
 
-                            # Create DataFrame with state labels
-                            n_states = T_matrix.shape[0]
-                            state_labels = [f"State_{i}" for i in range(n_states)]
-                            T_df = pd.DataFrame(T_matrix, index=state_labels, columns=state_labels)
-                            T_df.to_csv(msm_dir / f"{prefix}_transition_matrix.csv")
-                            print(
-                                f"  Saved transition matrix as CSV: {prefix}_transition_matrix.csv"
-                            )
+                        # Create DataFrame with state labels
+                        n_states = T_matrix.shape[0]
+                        state_labels = [f"State_{i}" for i in range(n_states)]
+                        T_df = pd.DataFrame(T_matrix, index=state_labels, columns=state_labels)
+                        T_df.to_csv(msm_dir / f"{prefix}_transition_matrix.csv")
+                        print(f"  Saved transition matrix as CSV: {prefix}_transition_matrix.csv")
 
-                            # Save a summary version with only high-probability transitions
-                            threshold = 0.01  # Only show transitions > 1%
-                            T_summary = T_matrix.copy()
-                            T_summary[T_summary < threshold] = 0
-                            T_summary_df = pd.DataFrame(
-                                T_summary, index=state_labels, columns=state_labels
-                            )
-                            T_summary_df.to_csv(msm_dir / f"{prefix}_transition_matrix_summary.csv")
-                            print(
-                                f"  Saved filtered transition matrix as CSV: {prefix}_transition_matrix_summary.csv"
-                            )
+                        # Save a summary version with only high-probability transitions
+                        threshold = 0.01  # Only show transitions > 1%
+                        T_summary = T_matrix.copy()
+                        T_summary[T_summary < threshold] = 0
+                        T_summary_df = pd.DataFrame(
+                            T_summary, index=state_labels, columns=state_labels
+                        )
+                        T_summary_df.to_csv(msm_dir / f"{prefix}_transition_matrix_summary.csv")
+                        print(
+                            f"  Saved filtered transition matrix as CSV: {prefix}_transition_matrix_summary.csv"
+                        )
 
-                        except Exception as csv_error:
-                            print(f"  Warning: Could not save CSV format: {csv_error}")
-                            # Fallback: save as simple text file
-                            np.savetxt(
-                                msm_dir / f"{prefix}_transition_matrix.txt",
-                                T_matrix,
-                                fmt="%.6f",
-                                delimiter="\t",
-                            )
+                    except Exception as csv_error:
+                        print(f"  Warning: Could not save CSV format: {csv_error}")
+                        # Fallback: save as simple text file
+                        np.savetxt(
+                            msm_dir / f"{prefix}_transition_matrix.txt",
+                            T_matrix,
+                            fmt="%.6f",
+                            delimiter="\t",
+                        )
                     else:
                         # Save as tab-delimited text file (can be opened in Excel)
                         print("  Pandas not available, saving as tab-delimited text file")
@@ -3919,27 +3899,26 @@ class OutputManager:
                     timescales = np.array(msm_data["msm_timescales"])
                     np.save(msm_dir / f"{prefix}_implied_timescales.npy", timescales)
 
-                    if PANDAS_AVAILABLE:
-                        try:
-                            import pandas as pd
+                    try:
+                        import pandas as pd
 
-                            ts_df = pd.DataFrame(
-                                {
-                                    "Timescale_Index": range(1, len(timescales) + 1),
-                                    "Timescale_Value": timescales,
-                                    "Process_Rate": 1.0 / timescales,
-                                }
-                            )
-                            ts_df.to_csv(msm_dir / f"{prefix}_implied_timescales.csv", index=False)
-                            print(f"  Saved timescales as CSV: {prefix}_implied_timescales.csv")
-                        except Exception:
-                            # Fallback to text format
-                            np.savetxt(
-                                self.output_dir / f"{prefix}_implied_timescales.txt",
-                                timescales,
-                                fmt="%.6f",
-                                header="Timescale_Index\tTimescale_Value",
-                            )
+                        ts_df = pd.DataFrame(
+                            {
+                                "Timescale_Index": range(1, len(timescales) + 1),
+                                "Timescale_Value": timescales,
+                                "Process_Rate": 1.0 / timescales,
+                            }
+                        )
+                        ts_df.to_csv(msm_dir / f"{prefix}_implied_timescales.csv", index=False)
+                        print(f"  Saved timescales as CSV: {prefix}_implied_timescales.csv")
+                    except Exception:
+                        # Fallback to text format
+                        np.savetxt(
+                            self.output_dir / f"{prefix}_implied_timescales.txt",
+                            timescales,
+                            fmt="%.6f",
+                            header="Timescale_Index\tTimescale_Value",
+                        )
                     else:
                         # Save as text file with header
                         with open(self.output_dir / f"{prefix}_implied_timescales.txt", "w") as f:
@@ -3950,28 +3929,25 @@ class OutputManager:
                 # Save state populations and assignments as CSV
                 kinetic_data = msm_data.get("kinetic_analysis", {})
                 if "top_populated_states" in kinetic_data and "state_populations" in kinetic_data:
-                    if PANDAS_AVAILABLE:
-                        try:
-                            import pandas as pd
+                    try:
+                        import pandas as pd
 
-                            pop_df = pd.DataFrame(
-                                {
-                                    "State_ID": kinetic_data["top_populated_states"],
-                                    "Population": kinetic_data["state_populations"],
-                                    "Population_Percent": [
-                                        p * 100 for p in kinetic_data["state_populations"]
-                                    ],
-                                }
-                            )
-                            pop_df = pop_df.sort_values("Population", ascending=False)
-                            pop_df.to_csv(
-                                self.output_dir / f"{prefix}_state_populations.csv", index=False
-                            )
-                            print(
-                                f"  Saved state populations as CSV: {prefix}_state_populations.csv"
-                            )
-                        except Exception:
-                            pass
+                        pop_df = pd.DataFrame(
+                            {
+                                "State_ID": kinetic_data["top_populated_states"],
+                                "Population": kinetic_data["state_populations"],
+                                "Population_Percent": [
+                                    p * 100 for p in kinetic_data["state_populations"]
+                                ],
+                            }
+                        )
+                        pop_df = pop_df.sort_values("Population", ascending=False)
+                        pop_df.to_csv(
+                            self.output_dir / f"{prefix}_state_populations.csv", index=False
+                        )
+                        print(f"  Saved state populations as CSV: {prefix}_state_populations.csv")
+                    except Exception:
+                        pass
                     else:
                         # Save as text file
                         with open(self.output_dir / f"{prefix}_state_populations.txt", "w") as f:
@@ -3984,26 +3960,25 @@ class OutputManager:
                 # Save metastable state information
                 metastable_data = msm_data.get("metastable_states", {})
                 if "metastable_assignments" in metastable_data:
-                    if PANDAS_AVAILABLE:
-                        try:
-                            import pandas as pd
+                    try:
+                        import pandas as pd
 
-                            meta_assignments = metastable_data["metastable_assignments"]
-                            meta_df = pd.DataFrame(
-                                {
-                                    "Microstate_ID": range(len(meta_assignments)),
-                                    "Metastable_State": meta_assignments,
-                                }
-                            )
-                            meta_df.to_csv(
-                                self.output_dir / f"{prefix}_metastable_assignments.csv",
-                                index=False,
-                            )
-                            print(
-                                f"  Saved metastable assignments as CSV: {prefix}_metastable_assignments.csv"
-                            )
-                        except Exception:
-                            pass
+                        meta_assignments = metastable_data["metastable_assignments"]
+                        meta_df = pd.DataFrame(
+                            {
+                                "Microstate_ID": range(len(meta_assignments)),
+                                "Metastable_State": meta_assignments,
+                            }
+                        )
+                        meta_df.to_csv(
+                            self.output_dir / f"{prefix}_metastable_assignments.csv",
+                            index=False,
+                        )
+                        print(
+                            f"  Saved metastable assignments as CSV: {prefix}_metastable_assignments.csv"
+                        )
+                    except Exception:
+                        pass
                     else:
                         # Save as text file
                         with open(
@@ -5537,47 +5512,42 @@ class OutputManager:
         """
         try:
             allosteric_dir = self.get_analysis_dir("allosteric")
-            if PANDAS_AVAILABLE:
-                import pandas as pd
+            import pandas as pd
 
-                # Create DataFrame with residue labels
-                eff_df = pd.DataFrame(
-                    efficiency_matrix, index=residue_labels, columns=residue_labels
+            # Create DataFrame with residue labels
+            eff_df = pd.DataFrame(efficiency_matrix, index=residue_labels, columns=residue_labels)
+            eff_df.to_csv(allosteric_dir / f"{prefix}_communication_efficiency_matrix.csv")
+            print(
+                f"  Saved full communication efficiency matrix: {prefix}_communication_efficiency_matrix.csv"
+            )
+
+            # Also save high-efficiency pairs summary
+            high_eff_pairs = []
+            threshold = 0.2  # Efficiency threshold for interesting pairs
+
+            for i, source in enumerate(residue_labels):
+                for j, target in enumerate(residue_labels):
+                    if i < j and efficiency_matrix[i, j] >= threshold:  # Upper triangle only
+                        high_eff_pairs.append(
+                            {
+                                "Source_Residue": source,
+                                "Target_Residue": target,
+                                "Communication_Efficiency": efficiency_matrix[i, j],
+                                "Shortest_Path_Length": (
+                                    1.0 / efficiency_matrix[i, j]
+                                    if efficiency_matrix[i, j] > 0
+                                    else float("inf")
+                                ),
+                            }
+                        )
+
+            if high_eff_pairs:
+                high_eff_df = pd.DataFrame(high_eff_pairs)
+                high_eff_df = high_eff_df.sort_values("Communication_Efficiency", ascending=False)
+                high_eff_df.to_csv(
+                    allosteric_dir / f"{prefix}_high_efficiency_pairs.csv", index=False
                 )
-                eff_df.to_csv(allosteric_dir / f"{prefix}_communication_efficiency_matrix.csv")
-                print(
-                    f"  Saved full communication efficiency matrix: {prefix}_communication_efficiency_matrix.csv"
-                )
-
-                # Also save high-efficiency pairs summary
-                high_eff_pairs = []
-                threshold = 0.2  # Efficiency threshold for interesting pairs
-
-                for i, source in enumerate(residue_labels):
-                    for j, target in enumerate(residue_labels):
-                        if i < j and efficiency_matrix[i, j] >= threshold:  # Upper triangle only
-                            high_eff_pairs.append(
-                                {
-                                    "Source_Residue": source,
-                                    "Target_Residue": target,
-                                    "Communication_Efficiency": efficiency_matrix[i, j],
-                                    "Shortest_Path_Length": (
-                                        1.0 / efficiency_matrix[i, j]
-                                        if efficiency_matrix[i, j] > 0
-                                        else float("inf")
-                                    ),
-                                }
-                            )
-
-                if high_eff_pairs:
-                    high_eff_df = pd.DataFrame(high_eff_pairs)
-                    high_eff_df = high_eff_df.sort_values(
-                        "Communication_Efficiency", ascending=False
-                    )
-                    high_eff_df.to_csv(
-                        allosteric_dir / f"{prefix}_high_efficiency_pairs.csv", index=False
-                    )
-                    print(f"  Saved high-efficiency pairs: {prefix}_high_efficiency_pairs.csv")
+                print(f"  Saved high-efficiency pairs: {prefix}_high_efficiency_pairs.csv")
 
             else:
                 # Fallback: save as tab-delimited text
