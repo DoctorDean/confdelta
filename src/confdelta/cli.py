@@ -270,34 +270,28 @@ def run_comprehensive_differential_analysis(args):
 
         monitor.end_step()
 
-        # Print executive summary
         print("\n" + "=" * 70)
-        print("EXECUTIVE SUMMARY")
+        print(f"COMPARISON: {results.simulation_names[0]} vs {results.simulation_names[1]}")
         print("=" * 70)
 
-        exec_summary = results.executive_summary
-        print(f"Comparison: {exec_summary['comparison']}")
-        print(f"Total analyses performed: {exec_summary['total_analyses']}")
-        print(f"Significant findings: {exec_summary['significant_findings']}")
-        print(f"Overall similarity score: {exec_summary['overall_similarity']:.3f}")
-
-        print("\nKey insights:")
-        for insight in exec_summary["key_insights"]:
-            print(f"  • {insight}")
-
-        print("\nSimilarity scores by analysis type:")
-        for analysis_type, score in results.overall_similarity_scores.items():
-            print(f"  • {analysis_type.title()}: {score:.3f}")
-
-        print("\nMost significant changes:")
-        for analysis_type, changes in results.most_significant_changes.items():
-            if changes:
-                print(f"  • {analysis_type.title()}: {len(changes)} significant changes")
-                top_change = changes[0] if changes else None
-                if top_change:
-                    print(
-                        f"    - {top_change.get('description', 'N/A')} (p={top_change.get('significance', 'N/A')})"
-                    )
+        completed = [
+            name
+            for name, comparison in (
+                ("network", results.network_comparison),
+                ("dynamics", results.dynamics_comparison),
+                ("energetics", results.energetics_comparison),
+                ("kinetics", results.kinetics_comparison),
+                ("allosteric", results.allosteric_comparison),
+            )
+            if comparison is not None
+        ]
+        print(f"Comparisons computed: {', '.join(completed) if completed else 'none'}")
+        print(
+            "\nThese are descriptive differences only. Significance testing, effect\n"
+            "sizes and multiple-testing correction are not yet implemented; see\n"
+            "AUDIT.md. Do not interpret any difference below as statistically\n"
+            "significant."
+        )
 
         monitor.print_summary()
         print(f"\nComplete results available in: {args.output}")

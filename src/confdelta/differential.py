@@ -223,11 +223,6 @@ class ComprehensiveDifferentialResults:
     kinetics_comparison: KineticsComparison | None
     allosteric_comparison: AllostericComparison | None
 
-    # Summary statistics
-    overall_similarity_scores: dict[str, float]
-    most_significant_changes: dict[str, list[dict[str, Any]]]
-    executive_summary: dict[str, Any]
-
 
 # =====================================================
 # MAIN DIFFERENTIAL ANALYZER CLASS
@@ -335,11 +330,6 @@ class DifferentialAnalyzer:
         # Step 2: Comparative analysis
         print("Phase 2: Comparative analysis...")
         comparison_results = self._run_comparative_analyses(sim1_results, sim2_results)
-
-        # Step 3: Statistical analysis
-        if self.config.perform_statistical_tests:
-            print("Phase 3: Statistical significance testing...")
-            self._perform_statistical_analysis(comparison_results)
 
         # Step 4: Generate comprehensive results object
         print("Phase 4: Generating comprehensive results...")
@@ -451,21 +441,6 @@ class DifferentialAnalyzer:
 
         return comparison_results
 
-    def _perform_statistical_analysis(self, comparison_results: dict[str, Any]):
-        """Perform statistical significance testing on comparison results"""
-
-        if not SCIPY_AVAILABLE:
-            print("  Warning: scipy not available, skipping statistical tests")
-            return
-
-        print("  Performing statistical significance tests...")
-
-        # Implement statistical tests for each comparison type
-        for _analysis_type, results in comparison_results.items():
-            if hasattr(results, "statistical_significance"):
-                # Placeholder for statistical analysis implementation
-                pass
-
     def _compile_comprehensive_results(
         self,
         sim1: MDSimulation,
@@ -486,61 +461,7 @@ class DifferentialAnalyzer:
             energetics_comparison=comparison_results.get("energetics"),
             kinetics_comparison=comparison_results.get("kinetics"),
             allosteric_comparison=comparison_results.get("allosteric"),
-            overall_similarity_scores=self._calculate_similarity_scores(comparison_results),
-            most_significant_changes=self._identify_most_significant_changes(comparison_results),
-            executive_summary=self._generate_executive_summary(comparison_results, sim_names),
         )
-
-    def _calculate_similarity_scores(self, comparison_results: dict[str, Any]) -> dict[str, float]:
-        """Calculate overall similarity scores between simulations"""
-
-        similarity_scores = {}
-
-        # Network similarity
-        if "network" in comparison_results:
-            # Placeholder: implement network similarity calculation
-            similarity_scores["network"] = 0.85
-
-        # Dynamics similarity
-        if "dynamics" in comparison_results:
-            # Placeholder: implement dynamics similarity calculation
-            similarity_scores["dynamics"] = 0.72
-
-        # Add other similarity calculations...
-
-        return similarity_scores
-
-    def _identify_most_significant_changes(
-        self, comparison_results: dict[str, Any]
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Identify the most significant changes across all analysis types"""
-
-        significant_changes = {}
-
-        # Placeholder implementation
-        for analysis_type in comparison_results.keys():
-            significant_changes[analysis_type] = [
-                {"type": "placeholder", "significance": 0.001, "description": "Example change"}
-            ]
-
-        return significant_changes
-
-    def _generate_executive_summary(
-        self, comparison_results: dict[str, Any], sim_names: tuple[str, str]
-    ) -> dict[str, Any]:
-        """Generate executive summary of differential analysis"""
-
-        return {
-            "comparison": f"{sim_names[0]} vs {sim_names[1]}",
-            "total_analyses": len(comparison_results),
-            "significant_findings": 5,  # Placeholder
-            "overall_similarity": 0.78,  # Placeholder
-            "key_insights": [
-                "Significant changes in allosteric communication",
-                "Altered energy landscape minima",
-                "Modified kinetic pathways",
-            ],
-        }
 
     def _generate_outputs(self, results: ComprehensiveDifferentialResults):
         """Generate all output files and reports"""
@@ -588,9 +509,6 @@ class DifferentialAnalyzer:
             # Kinetics comparison CSV
             if results.kinetics_comparison:
                 self._create_kinetics_csv_reports(results.kinetics_comparison)
-
-            # Summary CSV
-            self._create_summary_csv_reports(results)
 
             print("  ✓ CSV reports generated")
 
@@ -698,28 +616,6 @@ class DifferentialAnalyzer:
             )
             timescale_df.to_csv(kinetics_dir / "timescale_changes.csv", index=False)
 
-    def _create_summary_csv_reports(self, results):
-        """Create summary CSV reports"""
-
-        import pandas as pd
-
-        reports_dir = self.subdirs["reports"]
-
-        # Overall similarity scores
-        similarity_df = pd.DataFrame(
-            [
-                {
-                    "Analysis_Type": analysis_type,
-                    "Similarity_Score": score,
-                    "Similarity_Category": (
-                        "high" if score > 0.8 else "medium" if score > 0.5 else "low"
-                    ),
-                }
-                for analysis_type, score in results.overall_similarity_scores.items()
-            ]
-        )
-        similarity_df.to_csv(reports_dir / "overall_similarity_scores.csv", index=False)
-
     def _create_visualizations(self, results):
         """Create difference plots and visualizations"""
 
@@ -735,9 +631,6 @@ class DifferentialAnalyzer:
                 and results.dynamics_comparison.dccm_difference_matrix.size > 0
             ):
                 self._create_dccm_difference_plot(results.dynamics_comparison)
-
-            # Create summary visualizations
-            self._create_summary_plots(results)
 
             print("  ✓ Visualizations created")
 
@@ -774,47 +667,6 @@ class DifferentialAnalyzer:
         )
         plt.close()
 
-    def _create_summary_plots(self, results):
-        """Create summary visualization plots"""
-
-        import matplotlib.pyplot as plt
-
-        # Similarity scores bar plot
-        if results.overall_similarity_scores:
-            fig, ax = plt.subplots(figsize=(10, 6))
-
-            analysis_types = list(results.overall_similarity_scores.keys())
-            scores = list(results.overall_similarity_scores.values())
-
-            bars = ax.bar(analysis_types, scores, color="skyblue", alpha=0.7, edgecolor="navy")
-            ax.set_ylim(0, 1)
-            ax.set_ylabel("Similarity Score", fontsize=12)
-            ax.set_title("Overall Similarity by Analysis Type", fontsize=14, fontweight="bold")
-            ax.grid(True, alpha=0.3)
-
-            # Add value labels on bars
-            for bar, score in zip(bars, scores, strict=False):
-                height = bar.get_height()
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2.0,
-                    height + 0.01,
-                    f"{score:.3f}",
-                    ha="center",
-                    va="bottom",
-                    fontweight="bold",
-                )
-
-            plt.xticks(rotation=45, ha="right")
-            plt.tight_layout()
-
-            reports_dir = self.subdirs["reports"]
-            plt.savefig(
-                reports_dir / "similarity_scores_summary.png",
-                dpi=self.config.figure_dpi,
-                bbox_inches="tight",
-            )
-            plt.close()
-
     def _create_html_report(self, results):
         """Generate comprehensive HTML report"""
 
@@ -831,7 +683,6 @@ class DifferentialAnalyzer:
         .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
         .section {{ margin: 20px 0; padding: 15px; border-left: 3px solid #3498db; }}
         .metric {{ background-color: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 3px; }}
-        .similarity-score {{ font-size: 1.2em; font-weight: bold; color: #2ecc71; }}
         table {{ border-collapse: collapse; width: 100%; margin: 10px 0; }}
         th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
         th {{ background-color: #f2f2f2; }}
@@ -843,19 +694,6 @@ class DifferentialAnalyzer:
         <p><strong>Comparison:</strong> {results.simulation_names[0]} vs {results.simulation_names[1]}</p>
         <p><strong>Analysis Date:</strong> {results.analysis_timestamp}</p>
         <p><strong>Software:</strong> confdelta v{__version__}</p>
-    </div>
-
-    <div class="section">
-        <h2>Executive Summary</h2>
-        <div class="metric">
-            <strong>Total Analyses:</strong> {results.executive_summary['total_analyses']}
-        </div>
-        <div class="metric">
-            <strong>Significant Findings:</strong> {results.executive_summary['significant_findings']}
-        </div>
-        <div class="metric">
-            <strong>Overall Similarity:</strong> <span class="similarity-score">{results.executive_summary['overall_similarity']:.3f}</span>
-        </div>
     </div>
 
     <div class="section">
@@ -885,7 +723,7 @@ class DifferentialAnalyzer:
 
 
 # =====================================================
-# PLACEHOLDER COMPARATOR CLASSES
+# COMPARATORS
 # =====================================================
 
 
