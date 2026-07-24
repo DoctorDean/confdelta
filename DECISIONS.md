@@ -221,3 +221,74 @@ per-platform PyEMMA build workarounds, and a troubleshooting section for
 PyEMMA install failures and NumPy 2.0 incompatibility. Editing around that
 would have left a document whose structure still implied installation is hard.
 It is not: `pip install confdelta` is the whole thing.
+
+---
+
+## Amputating the fabricated output
+
+### D-016 · The five example documents were deleted, not updated
+
+**Decision.** Removed all five worked examples in `docs/examples/`
+(~2,500 lines) and replaced them with a single accurate page.
+
+**Reasoning.** After the CLI collapse, **68 of the 68 flags** those documents
+used had ceased to exist, and three of the five invoked subcommands (`diff`,
+`differential`) that no longer exist. Not a single command in any of them could
+be run. Updating them would have meant rewriting every command block in
+documents whose structure was organised around option groups that no longer
+exist — for example a "Statistical Options" section documenting flags that
+never existed in the first place.
+
+One of them, `02_differential_analysis.md`, additionally presented invented
+numbers as results, with scientific interpretation attached, and told readers
+to open four CSV files no code path writes.
+
+This goes further than the approved scope, which called for stripping the
+invented tables from that one file. The narrower change was not defensible once
+it was clear every command in every file was broken: shipping documentation
+that cannot be followed is the failure mode this project is removing.
+
+**Mitigation.** The prose is in git history, the replacement page says so
+explicitly, and a validated worked example is a planned deliverable that will
+replace the page properly.
+
+### D-017 · Dead configuration options were removed rather than left as stubs
+
+**Decision.** Deleted nine `DifferentialConfig` options that no code path read,
+including `multiple_comparison_correction`, `bootstrap_iterations` and
+`permutation_iterations`.
+
+**Reasoning.** A configuration surface is a promise. A user could set
+`multiple_comparison_correction="bonferroni"`, see it accepted without
+complaint, and reasonably conclude their results were corrected. Nothing read
+it. Leaving these in place as forward-looking stubs would preserve exactly the
+misleading signal the audit identified. They return when the statistical core
+lands, and a parametrised test asserts each stays absent until then — passing
+one now raises `TypeError`.
+
+### D-018 · Multiple trajectories per condition are rejected, not concatenated
+
+**Decision.** The `compare` command carries trajectories internally as lists,
+which is the shape replicate-aware comparison needs, but supplying more than
+one per condition raises an error explaining why.
+
+**Reasoning.** MDAnalysis will happily concatenate a list of trajectories into
+one continuous Universe. Doing that to independent replicates destroys the
+replicate structure and presents *n* runs as a single long trajectory — the
+precise pseudoreplication error the statistical core is being built to prevent
+(see D-005). Accepting the flag shape now avoids a second breaking change
+later; rejecting the plural case avoids silently doing the wrong thing in the
+meantime. Users who genuinely want frames pooled are told to concatenate the
+files themselves, so the choice is explicit and recorded.
+
+### D-019 · Documentation accuracy is enforced by tests, not by discipline
+
+**Decision.** Three test groups now fail when documentation drifts from code:
+every option in `docs/CONFIGURATION.md` must exist and every existing option
+must be documented; every `confdelta` command in `README.md` and `docs/` must
+parse against the real argument parser.
+
+**Reasoning.** The audit's single most embarrassing finding was that 61 of 90
+documented CLI flags did not exist. That is not a mistake anyone makes
+deliberately — it is what happens when documentation and code drift for 23
+commits with nothing checking. Prose review does not catch it; a test does.

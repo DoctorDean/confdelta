@@ -13,6 +13,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Fabricated output.** `_generate_executive_summary` returned
+  `significant_findings: 5`, `overall_similarity: 0.78` and three invented
+  "key insights" byte-for-byte identically for any input, including empty
+  input; `_calculate_similarity_scores` always returned
+  `{network: 0.85, dynamics: 0.72}`; `_identify_most_significant_changes`
+  always returned a single `{"type": "placeholder", "significance": 0.001}`
+  entry. The CLI printed all of it under an "EXECUTIVE SUMMARY" banner on every
+  run, the HTML report rendered it as headline metrics, and
+  `overall_similarity_scores.csv` persisted it to disk. All removed, along with
+  `_perform_statistical_analysis`, whose body was `pass`.
+- **Placeholder significance tests.** `_test_network_significance` ignored both
+  of its graph arguments and returned literal p-values 0.05 / 0.01 / 0.1;
+  `_test_energy_significance` returned 0.05; `_test_population_changes`
+  returned 0.1; `_test_pathway_significance` and `_test_hotspot_significance`
+  returned `{}`. Removed with the five dataclass fields they populated.
+- **Pseudo p-values in the DCCM comparison.** `_perform_correlation_statistics`
+  computed `p = max(0.001, 1 - |Δρ|)` -- a relabelled effect magnitude -- and
+  thresholded it at 0.05. A correlation change of 0.5 produced zero
+  "significant" pairs; nothing fired below |Δρ| > 0.95. The accompanying
+  `effect_sizes` dict contained counts of cells above arbitrary cutoffs, not
+  effect sizes.
+- **The `SimplifiedMSM` fallback.** A failed MSM estimate silently returned a
+  hand-rolled model with invented exponential-decay eigenvalues, a uniform
+  stationary distribution, and the literal implied timescales
+  `[10.0, 5.0, 2.0]`. Estimation failures now raise and are recorded as errors.
+- **Nine `DifferentialConfig` options that nothing read**, five of which
+  advertised statistics that do not exist: `perform_statistical_tests`,
+  `significance_threshold`, `multiple_comparison_correction`,
+  `bootstrap_iterations`, `permutation_iterations`. Also
+  `create_difference_plots`, `create_pdf_summary`, `export_excel_workbook`,
+  `energy_change_threshold`.
+- **`docs/examples/`**: the five worked examples (~2,500 lines). All 68 flags
+  they used had ceased to exist and no command in them could be run. One
+  presented invented numbers as results and referenced four CSV files no code
+  path writes. Replaced by a single accurate page; the prose is in git history.
+
+### Changed
+
+- **BREAKING: the CLI has three subcommands, not five.** `compare` (primary),
+  `single` and `example-config`. `diff` (which described itself as legacy and
+  told users to run `differential` instead) and `differential` are gone, as is
+  the N-simulation form of `compare`. `MDComparator`, which implemented the
+  N-way comparison, remains in the Python API and under test.
+- **BREAKING: ensembles are given as `-a TOPOLOGY TRAJECTORY` and
+  `-b TOPOLOGY TRAJECTORY`**, with `--a-name` / `--b-name`, replacing
+  `-t1/-x1/-n1/-t2/-x2/-n2`. `compare` now exposes six options and `single`
+  five, down from 192 flag instances across the old five subcommands.
+- **BREAKING: analysis options moved to a JSON config file** (`--config`).
+  Unknown keys are errors that name the closest valid option, rather than being
+  silently ignored.
+- **BREAKING: `DynamicsComparison.significant_correlation_changes` is renamed
+  `large_correlation_changes`**, and its CSV from
+  `significant_correlation_changes.csv` to `large_correlation_changes.csv`. It
+  is produced by a magnitude filter, so the old name asserted something no code
+  had tested.
+- Core dependencies are imported unconditionally. `core.py` previously called
+  `sys.exit(1)` at module scope -- terminating the host process on
+  `import confdelta` -- and elsewhere swallowed `ImportError`, leaving `scipy`,
+  `sklearn` and even `defaultdict` undefined. `__init__.py` silently dropped ten
+  names from `__all__`; `cli.py` replaced the real exception with a generic
+  message.
+- `compute_msm=True` is now honoured when DCCM and PCA are both disabled. The
+  dynamic-analysis guard returned early in that case, so an MSM-only
+  configuration silently produced nothing.
+
+### Added
+
+- `confdelta.config`: strict JSON config loading, with did-you-mean suggestions
+  for mistyped keys and sections.
+- CLI input validation at the boundary: files must exist, not be directories,
+  and be readable; the two conditions must have different names. Errors print
+  one actionable line and exit 2 instead of a stack trace from inside
+  MDAnalysis.
+- `docs/CONFIGURATION.md`, generated from the dataclasses, with tests asserting
+  every documented option exists and every existing option is documented.
+- A test that parses every `confdelta` command in README.md and docs/ against
+  the real argument parser (15 commands currently checked).
+- `tests/test_cli.py`, `tests/test_config.py`, `tests/test_package_api.py`.
+  The suite grew from 80 tests to 140; `cli.py` coverage went from 4% to 65%.
+- `cli.py` is fully typed and came off the mypy debt list, which is now three
+  modules.
+
 ### Changed
 - **BREAKING: the package was renamed from `md-compare` to `confdelta`.**
   The import path is now `import confdelta` (was `import mdcompare`) and the
