@@ -99,6 +99,66 @@ def synthetic_simulation(synthetic_universe, monkeypatch):
     return sim
 
 
+def _write_ca_pdb(path, coords, chain="A"):
+    """Write a minimal CA-only PDB. *coords* is (n_atoms, 3)."""
+    lines = []
+    for i, (x, y, z) in enumerate(coords, start=1):
+        lines.append(
+            f"ATOM  {i:>5}  CA  ALA {chain}{i:>4}    "
+            f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           C"
+        )
+    lines.append("END")
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _base_ca_coords(n_atoms=8):
+    base = np.zeros((n_atoms, 3), dtype=np.float32)
+    base[:, 0] = np.arange(n_atoms) * 3.6
+    base[:, 1] = np.sin(np.arange(n_atoms) * 0.6) * 2.0
+    base[:, 2] = np.cos(np.arange(n_atoms) * 0.6) * 2.0
+    return base
+
+
+@pytest.fixture
+def ca_topology_pdb(tmp_path):
+    """A single-structure CA-only PDB usable as a topology template."""
+    return _write_ca_pdb(tmp_path / "topology.pdb", _base_ca_coords())
+
+
+@pytest.fixture
+def multi_model_pdb(tmp_path):
+    """A 3-model CA-only PDB (NMR / prediction style)."""
+    rng = np.random.default_rng(7)
+    base = _base_ca_coords()
+    blocks = []
+    for model in range(1, 4):
+        frame = base + rng.normal(0, 0.3, size=base.shape).astype(np.float32)
+        rows = [f"MODEL     {model:>4}"]
+        for i, (x, y, z) in enumerate(frame, start=1):
+            rows.append(
+                f"ATOM  {i:>5}  CA  ALA A{i:>4}    "
+                f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           C"
+            )
+        rows.append("ENDMDL")
+        blocks.append("\n".join(rows))
+    path = tmp_path / "models.pdb"
+    path.write_text("\n".join(blocks) + "\nEND\n")
+    return path
+
+
+@pytest.fixture
+def structure_files(tmp_path):
+    """Five separate single-structure PDBs sharing one atom count."""
+    rng = np.random.default_rng(11)
+    base = _base_ca_coords()
+    paths = []
+    for i in range(5):
+        frame = base + rng.normal(0, 0.3, size=base.shape).astype(np.float32)
+        paths.append(_write_ca_pdb(tmp_path / f"pred_{i}.pdb", frame))
+    return paths
+
+
 @pytest.fixture
 def small_graph():
     """A small deterministic NetworkX graph for network-utility tests."""
