@@ -26,6 +26,8 @@ class TestPublicSurface:
     def test_public_classes_are_exported(self):
         """The documented entry points must be importable from the top level."""
         for name in (
+            "Ensemble",
+            "EnsembleGroup",
             "NetworkAnalyzer",
             "AnalysisConfig",
             "MDSimulation",
@@ -36,6 +38,14 @@ class TestPublicSurface:
         ):
             assert name in confdelta.__all__
             assert hasattr(confdelta, name)
+
+    def test_ensemble_types_are_importable_from_top_level(self):
+        """Downstream tools import the input model straight from the package."""
+        from confdelta import Ensemble, EnsembleError, EnsembleGroup
+
+        assert Ensemble is confdelta.ensemble.Ensemble
+        assert EnsembleGroup is confdelta.ensemble.EnsembleGroup
+        assert issubclass(EnsembleError, ValueError)
 
     def test_all_is_not_silently_truncated(self):
         """__all__ must never shrink to the dependency-free fallback set.

@@ -54,8 +54,14 @@ from .differential import (
     DifferentialAnalyzer,
     DifferentialConfig,
 )
+from .ensemble import Ensemble, EnsembleError, EnsembleGroup
 
 __all__ = [
+    # Ensemble input model (the supported way to supply conformations).
+    "Ensemble",
+    "EnsembleGroup",
+    "EnsembleError",
+    # Analysis and comparison.
     "NetworkAnalyzer",
     "AnalysisConfig",
     "NetworkMetrics",
@@ -66,6 +72,7 @@ __all__ = [
     "MDCompare",
     "DifferentialAnalyzer",
     "DifferentialConfig",
+    # Introspection.
     "check_dependencies",
     "get_version_info",
     "FEATURES",
