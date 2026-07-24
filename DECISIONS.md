@@ -147,3 +147,77 @@ implied timescales `[10.0, 5.0, 2.0]`. Raise a diagnosable error instead.
 construction is worse than a crash: the user gets numbers that look like results. The same
 principle applies to the import guard in `__init__.py` that silently shrinks `__all__` — fail
 loudly and name the missing extra.
+
+---
+
+## Phase 1 — Rename, identity, dependency modernisation
+
+### D-011 · Class names keep their `MD` prefix for now
+
+**Decision.** The rename changed the package, module, distribution and console
+script names, but **not** the class names: `MDCompare`, `MDComparator` and
+`MDSimulation` are unchanged.
+
+**Reasoning.** Renaming classes is a separate API break from renaming the
+package, and these classes are being restructured in Phase 5 anyway —
+`MDSimulation` is the file-path-locked type that `Ensemble` replaces. Renaming
+them now would mean breaking downstream imports twice, and would add churn to a
+diff that is already large. The changelog records that they are provisional.
+
+**Revisit at.** Phase 5, when the public API is defined.
+
+### D-012 · The B905 sweep inserts `strict=False`, not `strict=True`
+
+**Decision.** Raising the lint target to Python 3.10 flagged 14 `zip()` calls
+without an explicit `strict=`. All 14 were fixed with `strict=False`.
+
+**Reasoning.** `strict=False` is exactly the current behaviour — zip truncates
+to the shortest input — so the sweep is provably behaviour-preserving.
+`strict=True` would be more informative at several of these sites (for example
+`zip(bars, values)` in plotting code, where the two are structurally the same
+length), but it would raise where the code previously truncated silently. The
+brief requires asking the maintainer before any change that could alter the
+numerical output of an existing analysis, and Phase 1 is explicitly a rename
+and dependency phase. Making these strict is a behaviour change and belongs
+with the comparator rewrite.
+
+**Revisit at.** Phase 5, per call site.
+
+### D-013 · mypy is enforced immediately, with a shrinking debt list
+
+**Decision.** mypy runs in CI as a blocking gate from 0.1.0. The 93
+pre-existing type errors are quarantined behind an explicit
+`[[tool.mypy.overrides]]` list naming four modules (`core`, `differential`,
+`cli`, `experimental.resistance_classifier`). Every module *not* on that list
+is checked and must stay clean.
+
+**Reasoning.** The alternatives were to make mypy non-blocking (which means it
+is ignored) or to fix 93 errors across 5 868 lines of `core.py` now (which is
+the Phase 5 job, not Phase 1). An explicit, named allowlist makes the debt
+visible and bounded, and — crucially — means every *new* module is type-checked
+from birth. `ensemble.py` and `stats.py` will never be able to join the list.
+
+**Constraint.** The list must only ever shrink. Adding a module to it is a
+regression, not a fix.
+
+### D-014 · No `python_version` pin in the mypy configuration
+
+**Decision.** The mypy config deliberately omits `python_version`.
+
+**Reasoning.** Pinning it to 3.10 makes mypy parse *third-party* stubs with
+3.10 grammar. numpy 2.5's stubs use `type` statements (3.12+), so mypy failed
+with a syntax error inside `numpy/__init__.pyi` before checking any confdelta
+code at all. Without the pin, mypy uses the interpreter it runs under.
+Version-specific behaviour across 3.10-3.13 is covered by the pytest matrix,
+which is the more direct check anyway.
+
+### D-015 · `docs/INSTALL.md` was rewritten rather than edited
+
+**Decision.** Replaced the 369-line installation guide with a 90-line one.
+
+**Reasoning.** The original was built end-to-end on premises that PyEMMA's
+removal invalidated: conda as the recommended path, a `numpy<2.0` pin,
+per-platform PyEMMA build workarounds, and a troubleshooting section for
+PyEMMA install failures and NumPy 2.0 incompatibility. Editing around that
+would have left a document whose structure still implied installation is hard.
+It is not: `pip install confdelta` is the whole thing.
