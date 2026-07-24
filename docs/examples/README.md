@@ -124,13 +124,29 @@ timescales when estimation failed.
 
 ## Python API
 
+An ensemble can be built from a trajectory, a multi-model PDB, a set of
+predicted structures, or an in-memory coordinate array — none of which the
+comparison code needs to distinguish:
+
 ```python
-from confdelta import AnalysisConfig, DifferentialAnalyzer, DifferentialConfig
+import numpy as np
+from confdelta import (
+    AnalysisConfig, DifferentialAnalyzer, DifferentialConfig,
+    Ensemble, EnsembleGroup,
+)
+
+# Condition A from an MD trajectory; condition B from predicted structures.
+wt = Ensemble.from_trajectory("wt.pdb", "wt.xtc", name="wild_type")
+mut = Ensemble.from_structures(["m0.pdb", "m1.pdb", "m2.pdb"], name="V82A")
+
+# Other sources, all interchangeable:
+#   Ensemble.from_pdb_models("ensemble.pdb")        # NMR / AlphaFold models
+#   Ensemble.from_coordinates(array, "topology.pdb")  # generative output
 
 analyzer = DifferentialAnalyzer(DifferentialConfig(), output_dir="results/")
-results = analyzer.run_differential_analysis(
-    "wt.pdb", "wt.xtc", "wild_type",
-    "v82a.pdb", "v82a.xtc", "V82A",
+results = analyzer.run_ensemble_comparison(
+    EnsembleGroup.single(wt),
+    EnsembleGroup.single(mut),
     AnalysisConfig(compute_msm=False),
 )
 
@@ -138,9 +154,11 @@ dccm_change = results.dynamics_comparison.dccm_difference_matrix
 modularity_change = results.network_comparison.modularity_change
 ```
 
-The API is being reworked to return structured, typed objects and to accept
-ensembles from sources other than trajectory files. Expect it to change before
-1.0.
+`EnsembleGroup` holds one or more replicate ensembles per condition. Today the
+comparison uses the first replicate and warns if given more; replicate-aware
+statistics are the next piece of work. The comparators still return the loosely
+structured objects inherited from MD-Compare; typed return values are planned,
+so expect the result shape to change before 1.0.
 
 ---
 
