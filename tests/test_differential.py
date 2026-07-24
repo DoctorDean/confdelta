@@ -58,17 +58,32 @@ class TestDifferentialConfig:
 
 
 class TestDifferentialAnalyzer:
-    def test_initialization_creates_subdirs(self, tmp_path):
-        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(tmp_path / "diff_out"))
-        assert analyzer.output_dir is not None
+    def test_construction_has_no_filesystem_side_effects(self, tmp_path):
+        """Building an analyzer must not create any directories.
+
+        Constructing one to reach its comparators, or in a test, should not
+        leave a seven-directory tree behind. The tree is created only when a
+        run actually writes to it.
+        """
+        out = tmp_path / "diff_out"
+        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(out))
         assert isinstance(analyzer.subdirs, dict)
         assert len(analyzer.subdirs) > 0
+        assert not out.exists(), "construction created the output directory"
 
     def test_comparators_are_constructed(self, tmp_path):
         analyzer = DifferentialAnalyzer(DifferentialConfig(), str(tmp_path / "diff_out"))
         assert isinstance(analyzer.network_comparator, NetworkComparator)
         assert isinstance(analyzer.dynamics_comparator, DynamicsComparator)
         assert isinstance(analyzer.allosteric_comparator, AllostericComparator)
+
+    def test_output_directories_are_created_on_setup(self, tmp_path):
+        out = tmp_path / "diff_out"
+        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(out))
+        analyzer._setup_output_directories()
+        assert out.is_dir()
+        for subdir in analyzer.subdirs.values():
+            assert subdir.is_dir()
 
 
 # ---------------------------------------------------------------------------

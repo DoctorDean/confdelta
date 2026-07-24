@@ -221,23 +221,11 @@ class DifferentialAnalyzer:
         self.output_dir = Path(output_dir)
         self.output_manager = None
 
-        # Create output directory structure
-        self._setup_output_directories()
-
-        # Initialize comparison modules
-        self.network_comparator = NetworkComparator(self.config)
-        self.dynamics_comparator = DynamicsComparator(self.config)
-        self.energetics_comparator = EnergeticsComparator(self.config)
-        self.kinetics_comparator = KineticsComparator(self.config)
-        self.allosteric_comparator = AllostericComparator(self.config)
-
-        print(f"Differential analysis initialized with output directory: {self.output_dir}")
-
-    def _setup_output_directories(self):
-        """Create organized output directory structure"""
-        self.output_dir.mkdir(exist_ok=True)
-
-        # Create main subdirectories
+        # Output directory *paths* are computed here, but nothing is written to
+        # disk. Constructing an analyzer must have no side effects, so that
+        # downstream code and tests can build one -- to reach the comparators,
+        # say -- without a directory tree appearing. The directories are created
+        # in run_differential_analysis, immediately before anything is written.
         self.subdirs = {
             "individual": self.output_dir / "01_individual_analyses",
             "networks": self.output_dir / "02_network_comparisons",
@@ -248,10 +236,21 @@ class DifferentialAnalyzer:
             "reports": self.output_dir / "07_comprehensive_report",
         }
 
+        # Initialize comparison modules
+        self.network_comparator = NetworkComparator(self.config)
+        self.dynamics_comparator = DynamicsComparator(self.config)
+        self.energetics_comparator = EnergeticsComparator(self.config)
+        self.kinetics_comparator = KineticsComparator(self.config)
+        self.allosteric_comparator = AllostericComparator(self.config)
+
+    def _setup_output_directories(self):
+        """Create the output directory structure on disk.
+
+        Called at the start of a run, not at construction. Idempotent.
+        """
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         for subdir in self.subdirs.values():
             subdir.mkdir(exist_ok=True)
-
-        # Create publication figures subdirectory
         if self.config.create_publication_figures:
             (self.subdirs["reports"] / "publication_figures_high_res").mkdir(exist_ok=True)
 
@@ -284,6 +283,9 @@ class DifferentialAnalyzer:
         """
         print(f"Starting differential analysis: {sim1_name} vs {sim2_name}")
         print("=" * 60)
+
+        # Create the output tree now, immediately before anything is written.
+        self._setup_output_directories()
 
         # Step 1: Perform individual analyses
         print("Phase 1: Individual simulation analyses...")
