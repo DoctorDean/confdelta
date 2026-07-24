@@ -143,16 +143,15 @@ warn_redundant_casts = true
 
 # Type-checking debt, inherited from MD-Compare. Every module NOT listed below
 # is type-checked and must stay clean -- including every new module -- so the
-# public API is typed from birth. The four modules here carry 93 pre-existing
-# errors (core.py 89, differential.py 13, cli.py 2, resistance_classifier.py 2;
-# the cli.py errors originate in core.py's dataclass annotations). They are
-# being rewritten phase by phase and each is removed from this list as it is
-# brought up to standard. **This list must only ever shrink.**
+# public API is typed from birth. Modules are removed from this list as they
+# are rewritten. **This list must only ever shrink.**
+#
+#   started at:  core.py, differential.py, cli.py, resistance_classifier.py
+#   cli.py       removed when the CLI was rewritten around `compare`/`single`
 [[tool.mypy.overrides]]
 module = [
     "confdelta.core",
     "confdelta.differential",
-    "confdelta.cli",
     "confdelta.experimental.resistance_classifier",
 ]
 ignore_errors = true

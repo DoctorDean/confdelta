@@ -180,9 +180,14 @@ class TestAllostericComparator:
 # ---------------------------------------------------------------------------
 
 
-def test_cli_exposes_differential_entrypoint():
-    """The CLI module must expose the comprehensive differential runner."""
+def test_cli_exposes_the_compare_entrypoint():
+    """`compare` is the CLI's primary command and must reach this module.
+
+    Replaces a test that pinned run_comprehensive_differential_analysis, the
+    entry point of the old `differential` subcommand. See tests/test_cli.py for
+    the full command-line surface.
+    """
     from confdelta import cli
 
-    assert hasattr(cli, "run_comprehensive_differential_analysis")
+    assert callable(cli.run_compare)
     assert callable(cli.main)
