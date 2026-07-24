@@ -135,3 +135,59 @@ class TestExampleConfig:
     def test_write_creates_parent_directories(self, tmp_path):
         path = write_example_config(tmp_path / "nested" / "dir" / "example.json")
         assert path.is_file()
+
+
+class TestDocumentationMatchesCode:
+    """docs/CONFIGURATION.md must describe the options that actually exist.
+
+    The previous README documented 61 CLI flags that did not exist -- 68% of
+    what it advertised. These tests make that class of drift a test failure.
+    """
+
+    @staticmethod
+    def _documented(section: str) -> set[str]:
+        import pathlib
+        import re
+
+        doc = pathlib.Path(__file__).resolve().parents[1] / "docs" / "CONFIGURATION.md"
+        text = doc.read_text()
+        start = text.index(f"## `{section}` options")
+        end = text.index("##", start + 5)
+        # Option tables use `| `name` | `default` | notes |`.
+        return set(re.findall(r"^\|\s*`([a-z_]+)`\s*\|", text[start:end], re.MULTILINE))
+
+    def test_every_documented_analysis_option_exists(self):
+        import dataclasses
+
+        from confdelta.core import AnalysisConfig
+
+        real = {f.name for f in dataclasses.fields(AnalysisConfig)}
+        phantom = self._documented("analysis") - real
+        assert phantom == set(), f"documented but not implemented: {sorted(phantom)}"
+
+    def test_every_analysis_option_is_documented(self):
+        import dataclasses
+
+        from confdelta.core import AnalysisConfig
+
+        real = {f.name for f in dataclasses.fields(AnalysisConfig)}
+        undocumented = real - self._documented("analysis")
+        assert undocumented == set(), f"implemented but undocumented: {sorted(undocumented)}"
+
+    def test_every_documented_comparison_option_exists(self):
+        import dataclasses
+
+        from confdelta.differential import DifferentialConfig
+
+        real = {f.name for f in dataclasses.fields(DifferentialConfig)}
+        phantom = self._documented("comparison") - real
+        assert phantom == set(), f"documented but not implemented: {sorted(phantom)}"
+
+    def test_every_comparison_option_is_documented(self):
+        import dataclasses
+
+        from confdelta.differential import DifferentialConfig
+
+        real = {f.name for f in dataclasses.fields(DifferentialConfig)}
+        undocumented = real - self._documented("comparison")
+        assert undocumented == set(), f"implemented but undocumented: {sorted(undocumented)}"
