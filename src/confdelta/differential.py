@@ -121,7 +121,10 @@ class DynamicsComparison:
 
     # DCCM differences
     dccm_difference_matrix: np.ndarray
-    significant_correlation_changes: list[
+    # Residue pairs whose |correlation change| exceeds
+    # DifferentialConfig.correlation_change_threshold. This is a magnitude
+    # filter, not a significance test.
+    large_correlation_changes: list[
         tuple[str, str, float, float]
     ]  # (res1, res2, old_corr, new_corr)
     regional_correlation_changes: dict[str, dict[str, float]]  # {region: {metric: value}}
@@ -130,11 +133,6 @@ class DynamicsComparison:
     pca_variance_changes: np.ndarray
     eigenvector_similarities: np.ndarray
     principal_component_shifts: dict[int, float]  # {PC_index: similarity_score}
-
-    # Statistical analysis
-    correlation_change_pvalues: np.ndarray
-    significant_residue_pairs: list[tuple[str, str]]
-    effect_sizes: dict[str, float]
 
 
 @dataclass
@@ -553,10 +551,10 @@ class DifferentialAnalyzer:
 
         dynamics_dir = self.subdirs["dynamics"]
 
-        # Significant correlation changes
-        if dynamics_comparison.significant_correlation_changes:
+        # Correlation changes above the magnitude threshold.
+        if dynamics_comparison.large_correlation_changes:
             corr_df = pd.DataFrame(
-                dynamics_comparison.significant_correlation_changes,
+                dynamics_comparison.large_correlation_changes,
                 columns=["Residue1", "Residue2", "Original_Correlation", "New_Correlation"],
             )
             corr_df["Correlation_Change"] = (
@@ -567,7 +565,7 @@ class DifferentialAnalyzer:
                 lambda x: "increase" if x > 0 else "decrease"
             )
             corr_df = corr_df.sort_values("Change_Magnitude", ascending=False)
-            corr_df.to_csv(dynamics_dir / "significant_correlation_changes.csv", index=False)
+            corr_df.to_csv(dynamics_dir / "large_correlation_changes.csv", index=False)
 
     def _create_allosteric_csv_reports(self, allosteric_comparison):
         """Create CSV reports for allosteric comparison"""
@@ -968,21 +966,13 @@ class DynamicsComparator:
             dyn1, dyn2
         )
 
-        # Statistical significance testing
-        correlation_pvalues, significant_pairs, effect_sizes = self._perform_correlation_statistics(
-            dyn1, dyn2, dccm_diff_matrix
-        )
-
         return DynamicsComparison(
             dccm_difference_matrix=dccm_diff_matrix,
-            significant_correlation_changes=correlation_changes,
+            large_correlation_changes=correlation_changes,
             regional_correlation_changes=regional_changes,
             pca_variance_changes=pca_variance_changes,
             eigenvector_similarities=eigenvector_similarities,
             principal_component_shifts=pc_shifts,
-            correlation_change_pvalues=correlation_pvalues,
-            significant_residue_pairs=significant_pairs,
-            effect_sizes=effect_sizes,
         )
 
     def _compare_dccm_matrices(
@@ -1005,16 +995,18 @@ class DynamicsComparator:
         # Calculate difference matrix
         dccm_diff = dccm2 - dccm1
 
-        # Find significant correlation changes
+        # Residue pairs whose correlation changed by more than the configured
+        # magnitude threshold. This is a filter on effect magnitude only; it
+        # says nothing about whether the change is distinguishable from noise.
         threshold = self.config.correlation_change_threshold
-        significant_changes = []
+        large_changes = []
 
         n_res = dccm_diff.shape[0]
         for i in range(n_res):
             for j in range(i + 1, n_res):  # Upper triangle only
                 change = dccm_diff[i, j]
                 if abs(change) >= threshold:
-                    significant_changes.append(
+                    large_changes.append(
                         (
                             f"res_{i+1}",  # Residue indices (1-based)
                             f"res_{j+1}",
@@ -1024,16 +1016,16 @@ class DynamicsComparator:
                     )
 
         # Sort by magnitude of change
-        significant_changes.sort(key=lambda x: abs(x[3] - x[2]), reverse=True)
+        large_changes.sort(key=lambda x: abs(x[3] - x[2]), reverse=True)
 
         # Regional analysis (if residue information available)
         regional_changes = self._analyze_regional_correlation_changes(dccm_diff, dyn1, dyn2)
 
         print(f"    DCCM difference matrix computed: {dccm_diff.shape}")
-        print(f"    Significant correlation changes: {len(significant_changes)} pairs")
+        print(f"    Pairs with |change| >= {threshold}: {len(large_changes)}")
         print(f"    Mean absolute change: {np.mean(np.abs(dccm_diff)):.4f}")
 
-        return dccm_diff, significant_changes, regional_changes
+        return dccm_diff, large_changes, regional_changes
 
     def _analyze_regional_correlation_changes(
         self, dccm_diff: np.ndarray, dyn1: dict, dyn2: dict
@@ -1109,71 +1101,16 @@ class DynamicsComparator:
 
         return variance_changes, eigenvector_similarities, pc_shifts
 
-    def _perform_correlation_statistics(
-        self, dyn1: dict, dyn2: dict, dccm_diff: np.ndarray
-    ) -> tuple[np.ndarray, list[tuple], dict]:
-        """Perform statistical significance testing for correlation changes"""
-
-        if not SCIPY_AVAILABLE or not self.config.perform_statistical_tests:
-            return np.array([]), [], {}
-
-        if dccm_diff.size == 0:
-            return np.array([]), [], {}
-
-        print("    Performing correlation change significance tests...")
-
-        # For now, implement a simple approach based on correlation magnitude
-        # In practice, would need time series data for proper statistical testing
-
-        n_res = dccm_diff.shape[0]
-        correlation_pvalues = np.ones((n_res, n_res))
-
-        # Identify significant pairs using threshold approach
-        threshold = self.config.correlation_change_threshold
-        significant_pairs = []
-
-        for i in range(n_res):
-            for j in range(i + 1, n_res):
-                if abs(dccm_diff[i, j]) >= threshold:
-                    # Estimate p-value based on change magnitude
-                    # This is a simplified approach - proper implementation would use
-                    # bootstrap or permutation tests on the actual trajectory data
-                    p_value = max(0.001, 1.0 - abs(dccm_diff[i, j]))
-                    correlation_pvalues[i, j] = p_value
-                    correlation_pvalues[j, i] = p_value
-
-                    if p_value < self.config.significance_threshold:
-                        significant_pairs.append((f"res_{i+1}", f"res_{j+1}"))
-
-        # Calculate effect sizes
-        effect_sizes = {
-            "mean_effect_size": np.mean(np.abs(dccm_diff)),
-            "large_effects": np.sum(np.abs(dccm_diff) > 0.3),  # Arbitrary threshold for "large"
-            "medium_effects": np.sum((np.abs(dccm_diff) > 0.15) & (np.abs(dccm_diff) <= 0.3)),
-            "small_effects": np.sum((np.abs(dccm_diff) > 0.05) & (np.abs(dccm_diff) <= 0.15)),
-        }
-
-        print(f"    Statistically significant pairs: {len(significant_pairs)}")
-        print(
-            f"    Effect sizes - Large: {effect_sizes['large_effects']}, "
-            f"Medium: {effect_sizes['medium_effects']}, Small: {effect_sizes['small_effects']}"
-        )
-
-        return correlation_pvalues, significant_pairs, effect_sizes
-
     def _create_empty_dynamics_comparison(self) -> DynamicsComparison:
         """Create empty comparison result when data is unavailable"""
 
         return DynamicsComparison(
             dccm_difference_matrix=np.array([]),
-            significant_correlation_changes=[],
+            large_correlation_changes=[],
             regional_correlation_changes={},
             pca_variance_changes=np.array([]),
             eigenvector_similarities=np.array([]),
             principal_component_shifts={},
-            correlation_change_pvalues=np.array([]),
-            significant_residue_pairs=[],
-            effect_sizes={},
         )
 
 
