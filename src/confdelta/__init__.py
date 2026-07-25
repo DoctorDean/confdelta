@@ -57,6 +57,13 @@ from .differential import (
 )
 from .ensemble import Ensemble, EnsembleError, EnsembleGroup
 from .features import compare_ensemble_groups
+from .interface import (
+    InterfacePersistence,
+    binder_preorganisation,
+    compare_interface_persistence,
+    interface_persistence,
+    interface_rmsf,
+)
 
 __all__ = [
     # Ensemble input model (the supported way to supply conformations).
@@ -67,6 +74,12 @@ __all__ = [
     "compare_ensemble_groups",
     "ComparisonReport",
     "FeatureComparison",
+    # Interface persistence (design triage).
+    "interface_persistence",
+    "InterfacePersistence",
+    "interface_rmsf",
+    "binder_preorganisation",
+    "compare_interface_persistence",
     # Analysis and comparison.
     "NetworkAnalyzer",
     "AnalysisConfig",
