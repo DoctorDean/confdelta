@@ -40,6 +40,7 @@ __version_info__ = tuple(int(v) for v in __version__.split(".") if v.isdigit())
 # with a bare ImportError naming only the symbol, giving no clue which
 # dependency was missing or which extra to install. A missing core dependency
 # is a broken install, and it should say so at import time.
+from .compare import ComparisonReport, FeatureComparison
 from .core import (
     AnalysisConfig,
     MDComparator,
@@ -55,12 +56,17 @@ from .differential import (
     DifferentialConfig,
 )
 from .ensemble import Ensemble, EnsembleError, EnsembleGroup
+from .features import compare_ensemble_groups
 
 __all__ = [
     # Ensemble input model (the supported way to supply conformations).
     "Ensemble",
     "EnsembleGroup",
     "EnsembleError",
+    # Statistical comparison (the core capability).
+    "compare_ensemble_groups",
+    "ComparisonReport",
+    "FeatureComparison",
     # Analysis and comparison.
     "NetworkAnalyzer",
     "AnalysisConfig",
