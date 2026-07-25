@@ -291,9 +291,7 @@ def auto_block_length(x: np.ndarray, *, multiplier: float = 2.0) -> int:
     return max(1, min(arr.size // 2 if arr.size >= 2 else 1, length))
 
 
-def block_resample_indices(
-    n: int, block_length: int, generator: np.random.Generator
-) -> np.ndarray:
+def block_resample_indices(n: int, block_length: int, generator: np.random.Generator) -> np.ndarray:
     """Indices for one moving circular block resample of a length-*n* series.
 
     Draws ``ceil(n / block_length)`` blocks of consecutive indices from random
