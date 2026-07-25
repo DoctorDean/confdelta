@@ -83,12 +83,21 @@ confdelta example-config -o study.json
 confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
 ```
 
-> **What confdelta reports today.** Descriptive differences only — difference
-> matrices, centrality and modularity deltas, energy-surface differences,
-> timescale ratios, pathway disruption and hotspot rank changes. There is no
-> significance testing, no effect-size estimation and no multiple-testing
-> correction yet, and the tool says so on every run. See
-> [AUDIT.md](AUDIT.md) for exactly what exists and what does not.
+> **What confdelta reports.** A per-residue **statistical** comparison — an
+> effect size (Hedges' g, or Cohen's d for single runs) with a confidence
+> interval, and a p-value corrected across all residues (Benjamini–Hochberg by
+> default). Effect sizes lead; p and q are secondary. With replicate ensembles
+> per condition the replicate is the unit of inference; with one run per
+> condition a block bootstrap over frames supplies the uncertainty, carrying a
+> caveat that a single run cannot separate the condition effect from run-to-run
+> variation. If the design cannot reach significance (e.g. three replicates per
+> condition, whose p-value floor is 0.10), the tool says so and points to the
+> effect sizes rather than reporting a misleading "nothing significant".
+>
+> Alongside, **descriptive** views — difference matrices, centrality and
+> modularity deltas, energy-surface differences, timescale ratios, pathway
+> disruption — are reported without inference. See [AUDIT.md](AUDIT.md) for the
+> project's history.
 
 ## **Analysis Capabilities**
 

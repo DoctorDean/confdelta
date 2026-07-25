@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The CLI's blanket "descriptive differences only" disclaimer, now that the
+  statistical comparison exists. `run_compare` prints the statistical summary
+  (effect sizes, CIs, corrected q-values, and the underpowered/caveat warnings)
+  instead.
 - **Fabricated output.** `_generate_executive_summary` returned
   `significant_findings: 5`, `overall_similarity: 0.78` and three invented
   "key insights" byte-for-byte identically for any input, including empty
@@ -95,6 +99,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Statistical comparison, wired end to end.** `compare_ensemble_groups` and
+  `DifferentialAnalyzer.run_ensemble_comparison` now produce a per-residue
+  comparison with effect sizes, confidence intervals and multiple-testing
+  corrected q-values -- the capability the package has claimed since v1.5.0 but
+  never had. Effect sizes lead; p and q are secondary. Replicate ensembles per
+  condition use the replicate as the unit of inference; a single run per
+  condition falls back to a block bootstrap with a caveat. The design's power
+  limit is surfaced, so a three-replicate comparison reports effect sizes rather
+  than a misleading "nothing significant". Written to
+  `07_comprehensive_report/per_residue_statistics.csv` and, via the CLI,
+  printed as a summary. `ComparisonReport` and `FeatureComparison` are exported.
+- `confdelta.compare` (the comparison engine over feature matrices) and
+  `confdelta.features` (per-residue extraction and `compare_ensemble_groups`).
+  `DifferentialConfig` regains `multiple_comparison_correction` and `alpha` --
+  real and consumed this time -- plus `statistical_feature`.
 - **`confdelta.stats`** -- the statistical primitives the comparison layer will
   use: effect sizes (Cohen's d, Hedges' g, Cliff's delta, with an analytic CI
   for g), integrated autocorrelation time and effective sample size, a moving

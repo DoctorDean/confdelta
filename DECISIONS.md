@@ -412,3 +412,60 @@ design is. Surfacing the floor lets the comparison layer say "this design cannot
 reach significance regardless of effect size; read the effect size instead"
 rather than implying the effect is absent. Making it public also lets downstream
 tools check power before committing compute to a comparison.
+
+---
+
+## Wiring the statistics into the comparison
+
+### D-027 · The first shipped feature is per-residue contact number
+
+**Decision.** The statistical comparison operates, for now, on one per-residue
+feature: contact number (how many other residues have their centroid within a
+cutoff, per frame). The engine is feature-agnostic; more features are a registry
+entry away.
+
+**Reasoning.** The comparison engine needed at least one real, defensible
+feature to be wired and demonstrated, and contact number is the best starting
+choice: it is computed from internal distances only, so it needs no structural
+alignment (alignment would be a correctness risk and a dependency in its own
+right); it produces one scalar per residue, so a protein yields hundreds of
+simultaneous tests and multiple-testing correction genuinely matters; and it is
+a standard proxy for local packing that a mutation perturbs, so it exercises the
+whole path on a scientifically meaningful quantity. RMSF and per-pair DCCM
+changes are the obvious next features, but each needs alignment or a larger test
+matrix, so they are deferred rather than rushed. `IDEAS.md` records them.
+
+### D-028 · Statistics use all replicates; the descriptive views use the first
+
+**Decision.** `run_ensemble_comparison` runs the statistical comparison over
+every replicate of both conditions, but the legacy descriptive comparators
+(network, DCCM, energetics, kinetics, allosteric) still run on the first
+replicate of each condition only. The replicate warning states this split.
+
+**Reasoning.** The statistical layer is the one that must be rigorous, and it is
+new, so it was built to consume the full `EnsembleGroup` from the start. The
+descriptive comparators are inherited MD-Compare code that operates on a single
+`MDSimulation`; making them aggregate across replicates is a separate,
+larger refactor with its own correctness questions (how to average a DCCM matrix
+across runs, how to combine community structures). Rather than block the
+statistical wiring on that, or silently use only one replicate for everything,
+the split is made explicit in the warning. The descriptive views are clearly
+secondary in the output and carry no inferential claim, so using one replicate
+for them is honest as long as it is stated.
+
+**Revisit at.** When the descriptive comparators are rewritten to return typed
+results (a later phase), they can aggregate across replicates at the same time.
+
+### D-029 · A failed statistical comparison degrades to None, not an abort
+
+**Decision.** If `compare_ensemble_groups` raises inside
+`run_ensemble_comparison` (an unsupported feature, mismatched systems), the
+error is logged and `statistical_comparison` is set to None; the descriptive
+analysis still completes.
+
+**Reasoning.** The descriptive comparison is independently useful and may be all
+some inputs support (e.g. two ensembles of genuinely different systems that a
+user still wants a rough network diff for). Aborting the whole run because the
+inferential layer could not be computed would throw away work the user can use.
+The None is explicit and the CLI reports "not available", so the degradation is
+visible, not silent.

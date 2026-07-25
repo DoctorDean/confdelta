@@ -3,11 +3,13 @@
 Every command on this page is checked against the real command-line parser by
 the test suite, so nothing here can drift out of existence.
 
-> **Scope.** confdelta 0.1.0 reports **descriptive differences only**. There is
-> no significance testing, no effect-size estimation and no multiple-testing
-> correction. Where this page says "changed", it means the number differs — not
-> that the difference is distinguishable from noise. See
-> [AUDIT.md](../../AUDIT.md) for a precise account of what exists.
+> **Scope.** confdelta reports a per-residue **statistical** comparison —
+> effect sizes with confidence intervals and multiple-testing-corrected
+> q-values (written to `07_comprehensive_report/per_residue_statistics.csv`) —
+> alongside the **descriptive** views below (difference matrices, centrality
+> and modularity deltas, pathway changes), which carry no inference. Where this
+> page says a descriptive quantity "changed", it means the number differs, not
+> that the difference is significant.
 
 ## Compare two ensembles
 
@@ -36,13 +38,14 @@ hiv_wt_vs_v82a/
 ├── 04_energetics_comparisons/    energy surface differences
 ├── 05_kinetics_comparisons/      MSM timescale changes
 ├── 06_allosteric_comparisons/    pathway disruption, hotspot rank changes
-└── 07_comprehensive_report/      HTML summary
+└── 07_comprehensive_report/      per-residue statistics + HTML summary
 ```
 
 The tables written are:
 
 | File | Contents |
 |---|---|
+| `07_comprehensive_report/per_residue_statistics.csv` | **The statistical comparison**: per-residue effect size, CI, and FDR-corrected q-value |
 | `02_network_comparisons/edge_weight_changes.csv` | Per-contact weight change |
 | `02_network_comparisons/<metric>_centrality_changes.csv` | Per-residue centrality change, one file per metric |
 | `03_dynamics_comparisons/large_correlation_changes.csv` | Residue pairs whose \|Δρ\| exceeds `correlation_change_threshold` |
@@ -124,41 +127,55 @@ timescales when estimation failed.
 
 ## Python API
 
+For just the statistical comparison, call `compare_ensemble_groups` directly.
 An ensemble can be built from a trajectory, a multi-model PDB, a set of
-predicted structures, or an in-memory coordinate array — none of which the
-comparison code needs to distinguish:
+predicted structures, or an in-memory array — all interchangeable:
 
 ```python
-import numpy as np
-from confdelta import (
-    AnalysisConfig, DifferentialAnalyzer, DifferentialConfig,
-    Ensemble, EnsembleGroup,
+from confdelta import Ensemble, EnsembleGroup, compare_ensemble_groups
+
+# Three replicate runs per condition -> the replicate is the unit of inference.
+wt = EnsembleGroup(
+    [Ensemble.from_trajectory("wt.pdb", f"wt_{i}.xtc") for i in range(3)], label="wild_type"
+)
+mut = EnsembleGroup(
+    [Ensemble.from_trajectory("v82a.pdb", f"v82a_{i}.xtc") for i in range(3)], label="V82A"
 )
 
-# Condition A from an MD trajectory; condition B from predicted structures.
-wt = Ensemble.from_trajectory("wt.pdb", "wt.xtc", name="wild_type")
-mut = Ensemble.from_structures(["m0.pdb", "m1.pdb", "m2.pdb"], name="V82A")
+report = compare_ensemble_groups(wt, mut, correction="fdr_bh", alpha=0.05)
+
+for f in report.significant_features():
+    print(f"{f.feature}: g={f.effect_size:+.2f} "
+          f"[{f.effect_ci.low:+.2f}, {f.effect_ci.high:+.2f}]  q={f.qvalue:.3g}")
 
 # Other sources, all interchangeable:
-#   Ensemble.from_pdb_models("ensemble.pdb")        # NMR / AlphaFold models
-#   Ensemble.from_coordinates(array, "topology.pdb")  # generative output
-
-analyzer = DifferentialAnalyzer(DifferentialConfig(), output_dir="results/")
-results = analyzer.run_ensemble_comparison(
-    EnsembleGroup.single(wt),
-    EnsembleGroup.single(mut),
-    AnalysisConfig(compute_msm=False),
-)
-
-dccm_change = results.dynamics_comparison.dccm_difference_matrix
-modularity_change = results.network_comparison.modularity_change
+#   Ensemble.from_structures(["m0.pdb", "m1.pdb", ...])   # predicted structures
+#   Ensemble.from_pdb_models("ensemble.pdb")              # NMR / AlphaFold models
+#   Ensemble.from_coordinates(array, "topology.pdb")      # generative output
 ```
 
-`EnsembleGroup` holds one or more replicate ensembles per condition. Today the
-comparison uses the first replicate and warns if given more; replicate-aware
-statistics are the next piece of work. The comparators still return the loosely
-structured objects inherited from MD-Compare; typed return values are planned,
-so expect the result shape to change before 1.0.
+`report.underpowered` is True when the design cannot reach significance (three
+replicates per condition have a p-value floor of 0.10); read the effect sizes in
+that case. A single ensemble per condition switches to a block-bootstrap
+`report.mode == "bootstrap"` with a caveat attached.
+
+The full comparison, including the descriptive network/dynamics/allosteric
+views and all output files, runs through `DifferentialAnalyzer`:
+
+```python
+from confdelta import AnalysisConfig, DifferentialAnalyzer, DifferentialConfig
+
+analyzer = DifferentialAnalyzer(DifferentialConfig(), output_dir="results/")
+results = analyzer.run_ensemble_comparison(wt, mut, AnalysisConfig(compute_msm=False))
+
+report = results.statistical_comparison         # the ComparisonReport above
+dccm_change = results.dynamics_comparison.dccm_difference_matrix
+```
+
+The statistical comparison returns typed objects (`ComparisonReport`,
+`FeatureComparison`); the descriptive comparators still return the loosely
+structured objects inherited from MD-Compare, so expect those to gain types
+before 1.0.
 
 ---
 
