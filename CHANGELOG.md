@@ -109,6 +109,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`confdelta.interface`** -- interface persistence, the first downstream
+  capability (design triage). `interface_persistence` measures which
+  inter-partner residue contacts form and what fraction of the ensemble each
+  persists for (heavy-atom or centroid contact definition), with a summary
+  score. `interface_rmsf` gives per-residue fluctuation after Kabsch alignment;
+  `binder_preorganisation` compares the binder's internal flexibility bound vs
+  unbound; `compare_interface_persistence` compares two designs over a reference
+  contact set, reusing the statistical engine. Exported from the top level.
 - **Statistical comparison, wired end to end.** `compare_ensemble_groups` and
   `DifferentialAnalyzer.run_ensemble_comparison` now produce a per-residue
   comparison with effect sizes, confidence intervals and multiple-testing

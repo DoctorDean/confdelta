@@ -518,3 +518,47 @@ small CA-only multi-model PDBs, commit, fill in the numbers) rather than a
 from-scratch build later. Crucially, no fabricated numbers are committed in the
 interim -- the whole project exists to remove those. The synthetic smoke test
 proves the harness is correct without standing in for the result.
+
+---
+
+## Interface persistence (first downstream capability)
+
+### D-033 · A different system for interface persistence: not HIV-1 protease
+
+**Decision.** Interface persistence is validated on a nanobody-target complex,
+not the HIV-1 protease flagship system.
+
+**Reasoning.** HIV-1 protease is an obligate homodimer. Its dimer interface is
+constitutive -- always present -- so contact persistence is trivially ~100% and
+the metric measures nothing interesting. A nanobody-target complex has a real,
+non-obligate binding interface where persistence and pre-organisation genuinely
+vary between designs, which is the use case the capability exists for. The
+feature is unit-tested now against synthetic two-chain complexes; the nanobody
+simulation is the validation, to be run on the workstation.
+
+### D-034 · Both contact definitions; comparison over a reference set
+
+**Decision.** ``interface_persistence`` offers both a heavy-atom (4.5 A, default)
+and a centroid (8 A) contact definition. ``compare_interface_persistence``
+compares two designs over a caller-supplied *reference* contact set (the
+designed interface), not the union of what each design happens to form.
+
+**Reasoning.** Maintainer decisions. Heavy-atom distance is the standard,
+chemically faithful interface definition and is the right default; the centroid
+option is cheaper and alignment-free for quick or coarse work, and is consistent
+with the existing contact-number feature. For the design-triage question -- "does
+this binder hold the contacts it was designed to make?" -- the fixed reference
+set is the right frame: a design that fails to form a designed contact must score
+zero persistence on it, which a union-of-observed set would instead silently drop.
+
+### D-035 · Interface RMSF uses a hand-rolled Kabsch superposition
+
+**Decision.** ``interface_rmsf`` aligns frames with a small numpy Kabsch
+implementation rather than MDAnalysis's ``AlignTraj`` / ``rms.RMSF``.
+
+**Reasoning.** ``AlignTraj(in_memory=True)`` mutates the universe's coordinates
+in place, which would corrupt the caller's ensemble, and ``rms.RMSF`` emits a
+deprecation warning (and mis-worded guidance) in the installed MDAnalysis. A
+dozen lines of Kabsch superposition are dependency-stable, do not mutate the
+input, and are exactly testable -- a rigid-body-translated complex must show
+~zero internal RMSF, which is asserted.
