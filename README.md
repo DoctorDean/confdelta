@@ -1,192 +1,118 @@
-# confdelta: statistical comparison of protein conformational ensembles
+# confdelta
+
+**Statistically rigorous comparison of two protein conformational ensembles — networks, dynamics and kinetics — with proper multiple-testing correction.**
 
 ![Python](https://img.shields.io/badge/python-3.10--3.13-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-**confdelta** is a comprehensive toolkit for analyzing molecular dynamics simulations with advanced network analysis, conformational dynamics, and kinetic modeling capabilities. Originally designed for HIV protease research, it provides publication-ready insights into protein dynamics, allosteric mechanisms, and drug resistance pathways.
+Comparing two ensembles — wild-type against a mutant, apo against holo, one design against another — is something almost every MD study does and almost everyone hand-rolls in a notebook: subtract two averages, eyeball the difference, and rarely correct for having just run hundreds of per-residue comparisons at once. confdelta makes that comparison a first-class, tested operation: per residue it reports an **effect size with a confidence interval** and a **p-value corrected across all residues**, and it is honest about when a design is too small to conclude anything.
 
-## **Key Features**
+Single-trajectory analysis (residue interaction networks, DCCM, PCA, free-energy landscapes, Markov state models) is here too, but as the layer the comparison is built on — the comparison is the point.
 
-### **Multi-Scale Dynamics Analysis**
--  **Network Topology Analysis**: Communities, centrality, allosteric pathways
--  **Dynamic Cross-Correlations**: DCCM matrices and motion coupling
--  **Principal Component Analysis**: Dominant motion modes and projections  
--  **Free Energy Landscapes**: Thermodynamic conformational analysis
--  **Markov State Models**: Kinetic pathways and transition timescales
--  **Allosteric Hotspot Mapping**: Critical communication residues
-
-### **Advanced Algorithms**
-- **Community Detection**: Leiden, Louvain, Spectral, Hierarchical clustering
-- **Centrality Analysis**: Betweenness, closeness, eigenvector, degree centrality
-- **Network Robustness**: Attack tolerance and vulnerability assessment
-- **Kinetic Modeling**: deeptime integration for MSM analysis
-- **Statistical Validation**: Z-score significance testing and cross-validation
-
-### **Publication-Ready Output**
-- **9-panel Network Dashboard**: Comprehensive topology visualization
-- **8-panel MSM Dashboard**: Complete kinetic analysis visualization
-- **Excel-Compatible Exports**: CSV files for detailed data analysis
-- **High-Resolution Figures**: 300 DPI publication-quality plots
-- **Comprehensive Reports**: Detailed scientific summaries
-
-## **Quick Start**
-
-### **Installation**
+## Install
 
 ```bash
 pip install confdelta
 ```
 
-Optional extras:
+Python 3.10–3.13, no conda required. Markov state models need one extra: `pip install "confdelta[msm]"`.
 
-```bash
-pip install "confdelta[msm]"       # + deeptime (Markov State Models)
-pip install "confdelta[leiden]"    # + Leiden community detection
-pip install "confdelta[all]"       # + all optional features
-```
-
-Requires Python 3.10-3.13. No conda environment is needed; the core install
-has no compiled optional dependencies.
-
-After installation the `confdelta` command is on your PATH; you can also
-run the tool as `python -m confdelta`.
-
-### **Basic Usage**
-
-Compare two ensembles:
-
-```bash
-confdelta compare -a wt.pdb wt.xtc -b mutant.pdb mutant.xtc -o results/
-```
-
-Label the conditions so the output tables read clearly:
+## Compare two ensembles
 
 ```bash
 confdelta compare \
-  -a wt.pdb wt.xtc       --a-name wild_type \
-  -b v82a.pdb v82a.xtc   --b-name V82A \
-  -o hiv_wt_vs_v82a/
+  -a wild_type.pdb wild_type.xtc  --a-name wild_type \
+  -b mutant.pdb    mutant.xtc     --b-name mutant \
+  -o results/
 ```
 
-Analyse a single ensemble:
+The run writes `results/07_comprehensive_report/per_residue_statistics.csv` — one row per residue, effect size and confidence interval first, corrected q-value after — and prints the largest effects. The output has this shape (the layout is real; the residues and numbers below are placeholders, not results from any particular system):
+
+```
+residue        g   ci_low  ci_high        q  sig
+A_82       +2.41    +1.36    +3.46   0.0108    *
+A_84       +1.62    +0.93    +2.31   0.0108    *
+A_50       -1.54    -2.06    -1.02   0.0144    *
+A_25       -0.97    -2.16    +0.23   0.2684
+```
+
+`g` is Hedges' g (effect size); `sig` marks residues significant after Benjamini–Hochberg
+correction across every residue tested. The DCCM difference heatmap and the descriptive
+network/allosteric tables are written alongside.
+
+If you supply **replicate** ensembles per condition, the replicate is the unit of inference. If you supply a **single run** per condition, a block bootstrap over frames supplies the uncertainty and the output says plainly that one run cannot separate the condition effect from run-to-run variation. And if the design cannot reach significance at all — three replicates per condition have a p-value floor of 0.10 — confdelta tells you that and points you to the effect sizes, instead of reporting a misleading "nothing significant".
+
+The `compare` command takes one run per condition, so it uses block-bootstrap (single-run)
+inference. For **replicate-level** inference, build `EnsembleGroup`s from several runs and
+use the Python API shown below.
+
+## Common tasks
 
 ```bash
+# Analyse a single ensemble on its own
 confdelta single -t system.pdb -x trajectory.xtc -n my_run -o results/
-```
 
-Change any analysis option through a config file:
-
-```bash
+# Generate a config file with every option, then run with it
 confdelta example-config -o study.json
 confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
 ```
 
-> **What confdelta reports.** A per-residue **statistical** comparison — an
-> effect size (Hedges' g, or Cohen's d for single runs) with a confidence
-> interval, and a p-value corrected across all residues (Benjamini–Hochberg by
-> default). Effect sizes lead; p and q are secondary. With replicate ensembles
-> per condition the replicate is the unit of inference; with one run per
-> condition a block bootstrap over frames supplies the uncertainty, carrying a
-> caveat that a single run cannot separate the condition effect from run-to-run
-> variation. If the design cannot reach significance (e.g. three replicates per
-> condition, whose p-value floor is 0.10), the tool says so and points to the
-> effect sizes rather than reporting a misleading "nothing significant".
->
-> Alongside, **descriptive** views — difference matrices, centrality and
-> modularity deltas, energy-surface differences, timescale ratios, pathway
-> disruption — are reported without inference. See [AUDIT.md](AUDIT.md) for the
-> project's history.
+Every option not shown on the command line lives in the config file; the full reference is
+in **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**, generated from the code and checked
+against it by the test suite.
 
-## **Analysis Capabilities**
+## Python API
 
-### **Network Topology Analysis**
-- **Residue Interaction Networks**: Distance-based, hydrogen bonds, salt bridges
-- **Community Detection**: Functional domain identification using multiple algorithms
-- **Centrality Analysis**: Critical residue identification with statistical significance
-- **Allosteric Pathway Mapping**: Communication route analysis between functional sites
-- **Network Robustness**: Vulnerability assessment under targeted attacks
+The comparison is designed to be imported. An ensemble is built from any source — a
+trajectory, a multi-model PDB, a set of predicted structures, or an in-memory coordinate
+array — and the comparison code does not care which:
 
-### **Dynamic Analysis**
-- **DCCM Analysis**: Residue-residue cross-correlations and motion coupling
-- **PCA Projections**: Principal component analysis with variance decomposition
-- **Energy Landscapes**: Free energy surfaces from PC1/PC2 projections
-- **Motion Mode Analysis**: Collective motions and conformational transitions
+```python
+from confdelta import Ensemble, EnsembleGroup, compare_ensemble_groups
 
-### **Kinetic Modeling (deeptime Integration)**
-- **Markov State Models**: Microstate networks and transition probabilities
-- **Implied Timescales**: Process separation and kinetic hierarchy
-- **Metastable States**: Long-lived conformational macrostates (PCCA+)
-- **Transition Pathways**: Dominant routes between conformational states
-- **Rate Constant Analysis**: Quantitative kinetic modeling
+wt  = EnsembleGroup([Ensemble.from_trajectory("wt.pdb",   f"wt_{i}.xtc")   for i in range(3)], label="wild_type")
+mut = EnsembleGroup([Ensemble.from_trajectory("v82a.pdb", f"v82a_{i}.xtc") for i in range(3)], label="V82A")
 
-## **Output Files**
+report = compare_ensemble_groups(wt, mut, correction="fdr_bh", alpha=0.05)
 
-### **Core Analysis Results**
-```
-analysis_results/
-├── analysis_network_analysis.png          # 9-panel network dashboard
-├── analysis_dccm_heatmap.png             # Dynamic cross-correlations
-├── analysis_pca_analysis.png             # Principal component analysis
-├── analysis_energy_landscape.png         # Free energy surface
-├── analysis_msm_analysis.png             # 8-panel MSM dashboard
-├── analysis_centrality.csv               # Node importance metrics
-├── analysis_allosteric_hotspots.csv      # Critical communication residues
-└── analysis_report.json                  # Complete analysis summary
+for f in report.significant_features():
+    print(f"{f.feature}: g={f.effect_size:+.2f} "
+          f"[{f.effect_ci.low:+.2f}, {f.effect_ci.high:+.2f}]  q={f.qvalue:.3g}")
 ```
 
-### **MSM Analysis Files**
-```
-msm_results/
-├── analysis_transition_matrix.csv         # Full transition matrix (Excel-ready)
-├── analysis_transition_matrix_summary.csv # High-probability transitions only
-├── analysis_implied_timescales.csv        # Kinetic hierarchy with rates
-├── analysis_state_populations.csv         # Microstate importance ranking
-├── analysis_metastable_assignments.csv    # Microstate → macrostate mapping
-├── analysis_discrete_trajectory.npy       # State assignments over time
-└── analysis_msm_summary.txt              # Comprehensive kinetic analysis
-```
+`report` is typed (`ComparisonReport` / `FeatureComparison`): `report.underpowered`,
+`report.mode` (`"replicate"` or `"bootstrap"`), `report.ranked_by_effect()`, and the
+per-residue effect sizes, confidence intervals and q-values are all attributes, not files.
+Other sources: `Ensemble.from_structures([...])`, `.from_pdb_models(path)`,
+`.from_coordinates(array, topology)`.
 
-## **Scientific Applications**
+## What it does
 
-### **HIV Protease Research**
-- **Flap Dynamics**: Open/closed transition analysis and inhibitor binding
-- **Drug Resistance**: Mutation effects on network topology and kinetics
-- **Allosteric Mechanisms**: Cross-chain communication and cooperativity
-- **Inhibitor Design**: Binding pathway analysis and residence time prediction
+- **Compare two ensembles, with statistics** — per-residue effect sizes, confidence
+  intervals and FDR/Bonferroni-corrected q-values; replicate-level or block-bootstrap
+  inference; honest reporting of underpowered designs. *This is the core.*
+- **Descriptive difference views** — DCCM difference matrices, centrality and modularity
+  deltas, energy-surface differences, allosteric pathway and hotspot changes. Reported
+  without inference, alongside the statistics.
+- **Single-ensemble analysis** — residue interaction networks and community detection,
+  dynamic cross-correlation, PCA and free-energy landscapes, and (with the `msm` extra)
+  Markov state models. The substrate the comparison is built on.
 
-### **General Protein Dynamics**
-- **Conformational Selection**: Pre-existing state analysis for ligand binding
-- **Allosteric Networks**: Signal transduction pathway identification
-- **Protein Folding**: Pathway analysis and intermediate state characterization
-- **Stability Engineering**: Critical residue identification for rational design
+## Status
 
-## **Configuration**
+confdelta is `0.1.0` and pre-1.0: the statistical comparison returns typed objects, but the
+descriptive comparators still return the loosely structured objects inherited from its
+predecessor, and one per-residue feature (contact number) is wired so far. Expect the API to
+firm up before 1.0. It continues **MD-Compare**; see [CHANGELOG.md](CHANGELOG.md) for the
+lineage and [AUDIT.md](AUDIT.md) for an account of what was rebuilt and why.
 
-The command line carries only what a typical run needs; every other analysis
-option lives in a JSON config file.
+## Documentation
 
-```bash
-confdelta example-config -o study.json     # every option, at its default
-confdelta compare -a wt.pdb wt.xtc -b mut.pdb mut.xtc --config study.json
-```
+- [docs/INSTALL.md](docs/INSTALL.md) — installation and extras
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — every configuration option
+- [docs/examples/README.md](docs/examples/README.md) — worked examples
 
-The full option reference is in **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
-It is generated from the code and checked against it by the test suite, so it
-cannot document an option that does not exist.
+## Licence
 
-##  **License**
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-##  **Version History**
-
-confdelta is version **0.1.0**. It continues MD-Compare, which was previously
-versioned to 1.5.0; the version was reset at the rename because the public API
-is being rebuilt. The full history, including the MD-Compare releases, is in
-[CHANGELOG.md](CHANGELOG.md).
-
----
-
-**confdelta 0.1.0** - continues MD-Compare; see CHANGELOG.md for the lineage.
+MIT — see [LICENSE](LICENSE).

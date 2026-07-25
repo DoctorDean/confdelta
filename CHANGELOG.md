@@ -97,6 +97,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   off it. The pipeline now threads the real simulation through, and an
   end-to-end integration test covers it.
 
+### Changed
+
+- **README rewritten from scratch, comparison-first.** It now opens with what
+  confdelta is (statistical comparison of two ensembles), states the problem it
+  solves, and shows the `compare` command producing the per-residue statistics
+  table and a figure, before the Python API and a brief differential-first
+  feature list. The exhaustive options reference stays in docs/CONFIGURATION.md.
+  Down from 461 lines (and ~90 documented flags, 61 of them nonexistent) to
+  ~120 lines with zero phantom flags. Every claim maps to a passing test.
+
 ### Added
 
 - **Statistical comparison, wired end to end.** `compare_ensemble_groups` and
