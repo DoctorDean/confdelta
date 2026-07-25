@@ -4,4 +4,5 @@ include requirements.txt
 include src/confdelta/py.typed
 recursive-include docs *.md *.json
 recursive-include tests *.py
+recursive-include examples *.py *.md *.pdb
 global-exclude *.pyc __pycache__ *.so

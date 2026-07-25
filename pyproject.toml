@@ -110,7 +110,9 @@ where = ["src"]
 confdelta = ["py.typed"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# "examples" is included so the flagship reproduction test runs in CI. It skips
+# until the ensemble data is committed, then guards the published result.
+testpaths = ["tests", "examples"]
 addopts = "-ra"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
