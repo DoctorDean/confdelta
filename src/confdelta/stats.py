@@ -58,6 +58,7 @@ __all__ = [
     "ConfidenceInterval",
     "block_bootstrap",
     "block_bootstrap_interval",
+    "block_resample_indices",
     "auto_block_length",
     "PermutationResult",
     "permutation_two_sample",
@@ -290,6 +291,22 @@ def auto_block_length(x: np.ndarray, *, multiplier: float = 2.0) -> int:
     return max(1, min(arr.size // 2 if arr.size >= 2 else 1, length))
 
 
+def block_resample_indices(
+    n: int, block_length: int, generator: np.random.Generator
+) -> np.ndarray:
+    """Indices for one moving circular block resample of a length-*n* series.
+
+    Draws ``ceil(n / block_length)`` blocks of consecutive indices from random
+    wrap-around start points and returns the first *n* of the concatenation.
+    Exposed so that a two-sample statistic (which must resample two series with
+    one scheme) can share the exact resampling used by :func:`block_bootstrap`.
+    """
+    n_blocks = int(np.ceil(n / block_length))
+    starts = generator.integers(0, n, size=n_blocks)
+    offsets = np.arange(block_length)
+    return (starts[:, None] + offsets[None, :]).ravel()[:n] % n
+
+
 def block_bootstrap(
     x: np.ndarray,
     statistic: Callable[[np.ndarray], float],
@@ -321,14 +338,9 @@ def block_bootstrap(
         raise ValueError(f"block_length must be in [1, {n}]; got {block_length}.")
 
     generator = _as_generator(rng)
-    n_blocks = int(np.ceil(n / block_length))
-    offsets = np.arange(block_length)
-
     out = np.empty(n_resamples, dtype=float)
     for i in range(n_resamples):
-        starts = generator.integers(0, n, size=n_blocks)
-        idx = (starts[:, None] + offsets[None, :]).ravel() % n
-        out[i] = statistic(arr[idx[:n]])
+        out[i] = statistic(arr[block_resample_indices(n, block_length, generator)])
     return out
 
 
