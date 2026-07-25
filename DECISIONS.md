@@ -469,3 +469,52 @@ user still wants a rough network diff for). Aborting the whole run because the
 inferential layer could not be computed would throw away work the user can use.
 The None is explicit and the CLI reports "not available", so the degradation is
 visible, not silent.
+
+---
+
+## The flagship example
+
+### D-030 · Flagship: HIV-1 protease cantilever disulfide, from PubMed 39109919
+
+**Decision.** The flagship reproduces the finding of the maintainer's cryptic-
+cantilever-pocket paper: immobilising the cantilever with a disulfide cross-link
+makes the flap tips curl in and the protease favour a semi-open conformation.
+The reproduction compares a wild-type ensemble against the disulfide construct
+and checks that the significant per-residue changes concentrate in the flap
+(43-58) and cantilever (59-75) regions.
+
+**Reasoning.** It is the maintainer's own published work (a Phase 7 requirement),
+and the finding is *localised* -- a statement about which residues change -- which
+is exactly what confdelta's per-residue, FDR-corrected comparison is built to
+express. A diffuse finding would not test the tool's value; a localised one does.
+It also exercises the source-agnostic input model, since the ensembles can come
+from MD trajectories or from ColabFold.
+
+### D-031 · The regression test asserts the localisation, not a magic number
+
+**Decision.** `test_flagship.py` asserts the *qualitative published claim* -- a
+majority of significant residues fall in the flap/cantilever regions, and the
+largest effect is in one of them -- rather than pinning an exact effect size or
+count.
+
+**Reasoning.** The scientific finding is "the change is localised to the flaps
+and cantilever", so that is what the regression guards. Pinning an exact Hedges'
+g would make the test brittle to trivial changes in the resampling seed or frame
+subsampling without testing anything more meaningful. The localisation is both
+the real finding and a stable target. The maintainer can tighten the thresholds
+against the real run once the data is committed.
+
+### D-032 · Flagship ships with the harness now, the data later
+
+**Decision.** The reproduction script, region map, narrative and test are
+committed now; the ensemble PDBs are added once generated on the workstation.
+The test skips until the data is present, so CI stays green in the meantime, and
+the README states plainly that it reports no numbers yet.
+
+**Reasoning.** The trajectory data lives on a remote workstation, not the
+development machine, so the reproduction cannot be completed in one sitting.
+Committing the harness now lets the data step be a clean drop-in (generate two
+small CA-only multi-model PDBs, commit, fill in the numbers) rather than a
+from-scratch build later. Crucially, no fabricated numbers are committed in the
+interim -- the whole project exists to remove those. The synthetic smoke test
+proves the harness is correct without standing in for the result.
