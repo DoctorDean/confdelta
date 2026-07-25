@@ -356,3 +356,59 @@ a second breaking change for every caller. Accepting the group shape now and
 filling in the statistics behind it avoids that. Using only the first replicate
 in the meantime is honest (it warns) and is no worse than the current
 single-run behaviour.
+
+---
+
+## The statistical core
+
+### D-024 · The block bootstrap's acceptance bar is near-nominal coverage, not exactly 0.95
+
+**Decision.** The block-bootstrap acceptance test asserts that measured 95%
+confidence-interval coverage on autocorrelated AR(1) data is *near-nominal*
+(≥ 0.85 at N=1000, φ=0.8) and *dramatically better than the IID bootstrap*
+(which undercovers to ~0.51), rather than asserting coverage ≥ 0.95.
+
+**Reasoning.** Reaching exactly 0.95 coverage at moderate effective sample size
+is not achievable by any method, not a shortcoming of this implementation. It
+was measured directly during design: at N=1000, φ=0.8 (effective sample size
+~100), even the effective-sample-size *t*-interval — the gold standard for the
+mean of a dependent series — reaches only ~0.90, and the block bootstrap
+percentile interval ~0.89. The undercoverage comes from estimating a long-run
+variance from a short dependent series and shrinks as N_eff grows. Writing a
+test that demanded 0.95 would either fail forever or force a dishonest tolerance
+fudge. The honest, informative acceptance criteria are the two that actually
+matter: the interval is close to nominal, and it fixes most of the gap the IID
+bootstrap leaves open. Both are asserted; the docstring states the limitation
+plainly so no caller over-trusts a narrow interval.
+
+**Revisit if.** A calibrated interval (e.g. bootstrap-t with a variance-
+stabilising transform, or a subsampling scheme) is added; then the bar can rise.
+
+### D-025 · The block bootstrap is the general CI tool, despite mean-only alternatives being tighter
+
+**Decision.** Confidence intervals come from the block bootstrap, not from an
+effective-sample-size *t*-interval, even though the latter has marginally better
+coverage for the mean specifically.
+
+**Reasoning.** The ESS *t*-interval only works for the mean. The comparison
+layer needs intervals for arbitrary statistics — correlation changes, centrality
+deltas, modularity, effect sizes themselves — and the block bootstrap handles
+all of them with one mechanism. A per-statistic patchwork of analytic intervals
+would be more code to verify and would still leave gaps. The small coverage
+edge for the mean does not justify special-casing it. `effective_sample_size`
+is still exposed, because reporting N_eff to the user is independently valuable.
+
+### D-026 · `min_attainable_pvalue` is a first-class function, not an internal check
+
+**Decision.** The smallest p-value an exact permutation test can return for a
+given pair of group sizes is a public function, and `PermutationResult` exposes
+an `underpowered` property derived from it.
+
+**Reasoning.** This is the single most important honest behaviour the library
+can offer for the small designs the field actually runs (D-004). A tool that
+silently reports "p = 0.10, not significant" for a three-versus-three comparison
+with an enormous effect is misleading: the data are not the limiting factor, the
+design is. Surfacing the floor lets the comparison layer say "this design cannot
+reach significance regardless of effect size; read the effect size instead"
+rather than implying the effect is absent. Making it public also lets downstream
+tools check power before committing compute to a comparison.

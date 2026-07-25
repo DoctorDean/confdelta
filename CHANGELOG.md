@@ -95,6 +95,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`confdelta.stats`** -- the statistical primitives the comparison layer will
+  use: effect sizes (Cohen's d, Hedges' g, Cliff's delta, with an analytic CI
+  for g), integrated autocorrelation time and effective sample size, a moving
+  circular block bootstrap with autocorrelation-aware confidence intervals, a
+  two-sample permutation test with a `min_attainable_pvalue` honesty function
+  that reports when a design cannot reach significance, and multiple-testing
+  correction (Benjamini-Hochberg, Benjamini-Yekutieli, Bonferroni) via
+  `scipy.stats.false_discovery_control`. Pure functions, validated in the tests
+  against known analytical results and cross-checked against statsmodels; no
+  statsmodels runtime dependency. Not yet wired into the comparators.
 - **`confdelta.ensemble`** -- a source-agnostic input model. `Ensemble` is a
   set of conformations of one system, built from any of four sources through
   `Ensemble.from_trajectory`, `.from_pdb_models` (multi-model PDB),
