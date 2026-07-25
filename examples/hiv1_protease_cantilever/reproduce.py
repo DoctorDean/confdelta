@@ -90,8 +90,8 @@ def _plot(report, path: Path) -> None:
     colors = ["#c1121f" if f.significant else "#adb5bd" for f in features]
 
     fig, ax = plt.subplots(figsize=(11, 4))
-    # Shade the regions the finding is about.
-    for lo, hi, label in ((43, 58, "flap"), (59, 75, "cantilever")):
+    # Shade the regions the finding is about (flap 43-58, cantilever 62-78).
+    for lo, hi, label in ((43, 58, "flap"), (62, 78, "cantilever")):
         ax.axvspan(lo, hi, color="#4361ee", alpha=0.08)
         ax.text(
             (lo + hi) / 2,
@@ -102,6 +102,9 @@ def _plot(report, path: Path) -> None:
             fontsize=9,
             color="#4361ee",
         )
+    # Mark the engineered cross-link sites (G16C / L38C).
+    for site in (16, 38):
+        ax.axvline(site, color="#2a9d8f", linewidth=0.9, linestyle=":")
     ax.bar(resids, effects, color=colors, width=0.9)
     ax.axhline(0, color="#343a40", linewidth=0.8)
     ax.set_xlabel("residue number")

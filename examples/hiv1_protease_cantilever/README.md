@@ -13,9 +13,11 @@ into a regression test: if a future change alters the answer, the test fails.
 ## The question
 
 Sherry et al. identified a cryptic pocket on the *cantilever* of HIV-1 protease,
-and showed by MD that **immobilising the cantilever with a disulfide cross-link
-makes the flap tips curl in and the enzyme favour a semi-open conformation**
-([PubMed 39109919](https://pubmed.ncbi.nlm.nih.gov/39109919/)).
+and showed by MD that **immobilising the cantilever with a G16C/L38C disulfide
+cross-link makes the flap tips curl in and the enzyme favour a semi-open
+conformation** ([PubMed 39109919](https://pubmed.ncbi.nlm.nih.gov/39109919/)).
+The cross-link clamps the fulcrum (16) to the elbow (38); the *response* it
+provokes is what we test for, at the flaps and the cantilever.
 
 That is a statement about *where* the dynamics change: at the flaps and the
 cantilever, not uniformly across the enzyme. confdelta should be able to say the
@@ -32,11 +34,13 @@ Standard 99-residue-per-chain numbering (homodimer, chains A and B):
 | fulcrum | 11–22 |
 | elbow | 35–42 |
 | flap | 43–58 (tips 48–52) |
-| cantilever | 59–75 |
+| cantilever | 62–78 |
 | catalytic | 25–27 |
+| cross-link sites | 16, 38 (G16C/L38C) |
 
 Defined in [regions.py](regions.py); the flap and cantilever are the regions the
-finding predicts.
+finding predicts. The cantilever range (62–78) and the cross-link sites follow
+the paper.
 
 ## Run it
 

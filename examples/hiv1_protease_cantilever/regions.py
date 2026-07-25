@@ -1,9 +1,10 @@
 """HIV-1 protease structural regions, by residue number.
 
-Standard 99-residue-per-chain numbering (the enzyme is a homodimer, chains A and
-B). These ranges are the widely-used definitions; adjust them if your construct
-is numbered differently. Used to annotate each residue in the comparison so the
-flap and cantilever signal can be read off directly.
+99-residue-per-chain numbering (the enzyme is a homodimer, chains A and B). The
+region boundaries follow Sherry et al. (PubMed 39109919) -- in particular the
+cantilever is 62-78 there; adjust if your construct is numbered differently.
+Used to annotate each residue in the comparison so the flap and cantilever
+signal can be read off directly.
 """
 
 from __future__ import annotations
@@ -16,8 +17,13 @@ REGION_RANGES: list[tuple[str, range]] = [
     ("fulcrum", range(11, 23)),
     ("elbow", range(35, 43)),
     ("flap", range(43, 59)),
-    ("cantilever", range(59, 76)),
+    ("cantilever", range(62, 79)),  # 62-78, per the paper
 ]
+
+# The engineered disulfide that immobilises the cantilever: G16C/L38C (fulcrum to
+# elbow) in each monomer. The cross-link sites are the perturbation; the finding
+# is the *response* at the flaps and cantilever.
+CROSSLINK_SITES: set[int] = {16, 38}
 
 # The regions the paper's finding is about: immobilising the cantilever makes the
 # flap tips curl in and the protease favour a semi-open conformation. A faithful
