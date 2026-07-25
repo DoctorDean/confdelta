@@ -51,6 +51,69 @@ def _run(analyzer, group_a, group_b):
         return analyzer.run_ensemble_comparison(group_a, group_b, config)
 
 
+class TestStatisticalComparisonWired:
+    """The inferential layer must be attached to the full comparison and written."""
+
+    def _replicated_conditions(self, ca_topology_pdb):
+        from tests.conftest import _base_ca_coords
+
+        base = _base_ca_coords(8)
+
+        def group(spread, seeds, label):
+            ensembles = [
+                Ensemble.from_coordinates(
+                    (base + np.random.default_rng(s).normal(0, spread, size=(30, 8, 3))).astype(
+                        np.float32
+                    ),
+                    ca_topology_pdb,
+                    selection="name CA",
+                    name=f"{label}{s}",
+                )
+                for s in seeds
+            ]
+            return EnsembleGroup(ensembles, label=label)
+
+        return group(0.3, range(4), "wt"), group(0.9, range(10, 14), "mut")
+
+    def test_statistical_comparison_is_attached(self, ca_topology_pdb, tmp_path):
+        a, b = self._replicated_conditions(ca_topology_pdb)
+        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(tmp_path / "out"))
+        results = _run(analyzer, a, b)
+        report = results.statistical_comparison
+        assert report is not None
+        assert report.mode == "replicate"
+        assert report.n_tests == 8  # one per residue
+        assert report.correction == "fdr_bh"
+
+    def test_per_residue_csv_is_written(self, ca_topology_pdb, tmp_path):
+        a, b = self._replicated_conditions(ca_topology_pdb)
+        out = tmp_path / "out"
+        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(out))
+        _run(analyzer, a, b)
+        csv_path = out / "07_comprehensive_report" / "per_residue_statistics.csv"
+        assert csv_path.is_file()
+        text = csv_path.read_text()
+        assert "effect_size" in text
+        assert "qvalue" in text
+        assert "# correction: fdr_bh" in text
+
+    def test_correction_method_is_honoured(self, ca_topology_pdb, tmp_path):
+        a, b = self._replicated_conditions(ca_topology_pdb)
+        analyzer = DifferentialAnalyzer(
+            DifferentialConfig(multiple_comparison_correction="bonferroni"), str(tmp_path / "out")
+        )
+        results = _run(analyzer, a, b)
+        assert results.statistical_comparison.correction == "bonferroni"
+
+    def test_single_run_comparison_uses_bootstrap_mode(self, two_conditions, tmp_path):
+        analyzer = DifferentialAnalyzer(DifferentialConfig(), str(tmp_path / "out"))
+        results = _run(analyzer, *two_conditions)
+        report = results.statistical_comparison
+        assert report is not None
+        assert report.mode == "bootstrap"
+        assert report.caveat is not None
+
+
 class TestEnsembleComparisonEndToEnd:
     def test_runs_and_returns_results(self, two_conditions, tmp_path):
         analyzer = DifferentialAnalyzer(DifferentialConfig(), str(tmp_path / "out"))
@@ -124,11 +187,17 @@ class TestEnsembleComparisonEndToEnd:
 
 
 class TestReplicateWarning:
-    def test_extra_replicates_warn_and_use_the_first(self, two_conditions, ca_topology_pdb, caplog):
+    def test_descriptive_views_warn_they_use_only_the_first_replicate(
+        self, two_conditions, ca_topology_pdb, caplog
+    ):
+        """Extra replicates feed the statistics but not the descriptive views.
+
+        The warning must make that split clear: the descriptive comparisons use
+        only the first replicate, while the statistical comparison uses all.
+        """
         from tests.conftest import _base_ca_coords
 
         group_a, group_b = two_conditions
-        # Give condition A a second replicate.
         extra = Ensemble.from_coordinates(
             _base_ca_coords(8)
             + np.random.default_rng(9).normal(0, 0.3, size=(20, 8, 3)).astype(np.float32),
@@ -147,4 +216,6 @@ class TestReplicateWarning:
                 analyzer.run_ensemble_comparison(
                     group_a, group_b, AnalysisConfig(compute_msm=False, segments=1)
                 )
-        assert any("only the first is used" in r.message for r in caplog.records)
+        messages = " ".join(r.message for r in caplog.records)
+        assert "descriptive comparisons" in messages
+        assert "statistical comparison uses all" in messages

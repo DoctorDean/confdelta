@@ -116,6 +116,9 @@ with a default the user did not intend and never finding out.
 | `compare_energetics` | `True` |  |
 | `compare_kinetics` | `True` |  |
 | `compare_allosteric` | `True` |  |
+| `statistical_feature` | `'contacts'` | Per-residue feature tested; see confdelta.features.FEATURES |
+| `multiple_comparison_correction` | `'fdr_bh'` | fdr_bh, fdr_by, bonferroni, none |
+| `alpha` | `0.05` | Significance threshold on corrected q-values |
 | `create_publication_figures` | `False` |  |
 | `figure_dpi` | `300` |  |
 | `heatmap_colormap` | `'RdBu_r'` |  |
@@ -125,6 +128,11 @@ with a default the user did not intend and never finding out.
 | `centrality_change_threshold` | `0.1` | Minimum centrality change |
 
 ### Notes
+
+- `statistical_feature`, `multiple_comparison_correction` and `alpha` drive the
+  **inferential** per-residue comparison: effect sizes, confidence intervals and
+  corrected q-values. The three `*_change_threshold` options below drive the
+  separate **descriptive** views and are magnitude filters only.
 
 - The three `*_change_threshold` options are **magnitude filters**, not
   significance tests. They control which changes are large enough to be worth

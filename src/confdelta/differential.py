@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 
 from ._version import __version__
+from .compare import ComparisonReport
 from .core import AnalysisConfig, MDSimulation
 
 logger = logging.getLogger("confdelta")
@@ -30,19 +31,14 @@ logger = logging.getLogger("confdelta")
 class DifferentialConfig:
     """Configuration for differential analysis between two ensembles.
 
-    Note on what is absent
-    ----------------------
-    This dataclass previously carried ``perform_statistical_tests``,
-    ``significance_threshold``, ``multiple_comparison_correction``,
-    ``bootstrap_iterations`` and ``permutation_iterations``. None of them was
-    ever read by any code path: no bootstrap, no permutation test and no
-    multiple-testing correction existed. They advertised, in the configuration
-    surface, capabilities the package did not have. They will return when the
-    statistical core is implemented, and not before.
-
-    ``create_difference_plots``, ``create_pdf_summary``, ``export_excel_workbook``
-    and ``energy_change_threshold`` were removed for the same reason: declared,
-    never consulted.
+    Note on the statistics options
+    ------------------------------
+    ``multiple_comparison_correction`` and ``alpha`` returned in 0.1.0 once the
+    statistical core existed to consume them; before that they had been removed
+    for advertising capabilities the package did not have. ``bootstrap_iterations``,
+    ``permutation_iterations`` and ``perform_statistical_tests`` remain absent:
+    the resampling counts are function parameters with sensible defaults rather
+    than config, and the statistics always run.
     """
 
     # Which comparisons to run.
@@ -52,6 +48,11 @@ class DifferentialConfig:
     compare_kinetics: bool = True
     compare_allosteric: bool = True
 
+    # Per-residue statistical comparison (the inferential layer).
+    statistical_feature: str = "contacts"  # registered feature; see confdelta.features.FEATURES
+    multiple_comparison_correction: str = "fdr_bh"  # fdr_bh, fdr_by, bonferroni, none
+    alpha: float = 0.05  # significance threshold applied to corrected q-values
+
     # Visualisation.
     create_publication_figures: bool = False
     figure_dpi: int = 300
@@ -60,9 +61,9 @@ class DifferentialConfig:
     # Output.
     create_html_report: bool = True
 
-    # Magnitude thresholds for what counts as a reportable change. These are
-    # filters on effect size only; nothing here implies statistical
-    # significance.
+    # Magnitude thresholds for what counts as a reportable *descriptive* change.
+    # These are filters on effect magnitude only; nothing here implies statistical
+    # significance (which the per-residue layer above provides).
     correlation_change_threshold: float = 0.2  # Minimum |Δρ| to report a residue pair
     efficiency_change_threshold: float = 0.1  # Minimum communication efficiency change
     centrality_change_threshold: float = 0.1  # Minimum centrality change
@@ -193,6 +194,12 @@ class ComprehensiveDifferentialResults:
     kinetics_comparison: KineticsComparison | None
     allosteric_comparison: AllostericComparison | None
 
+    # Per-residue statistical comparison: effect sizes, confidence intervals and
+    # multiple-testing-corrected q-values. This is the inferential layer; the
+    # comparisons above are descriptive. Defaults to None for backward
+    # compatibility with results built by the legacy path-based runner.
+    statistical_comparison: ComparisonReport | None = None
+
 
 # =====================================================
 # MAIN DIFFERENTIAL ANALYZER CLASS
@@ -295,48 +302,72 @@ class DifferentialAnalyzer:
         :meth:`run_differential_analysis` remains for trajectory-file callers
         and is implemented on top of this.
 
-        Only the first replicate of each group is analysed for now. Multi-
-        replicate, replicate-as-unit-of-inference statistics are the next piece
-        of work (DECISIONS.md D-005); until then, supplying replicates is
-        accepted but only the first is used, and that is logged.
+        The per-residue **statistical** comparison uses every replicate of each
+        condition. The **descriptive** comparisons (network topology, DCCM, ...)
+        are run on the first replicate of each condition only; when a condition
+        has several replicates that is logged, since those views do not yet
+        aggregate across replicates.
         """
         if analysis_config is None:
             analysis_config = AnalysisConfig()
-
-        for group in (group_a, group_b):
-            if getattr(group, "has_replicates", False):
-                logger.warning(
-                    "Condition %r has %d replicates; only the first is used until "
-                    "replicate-aware statistics are implemented.",
-                    group.label,
-                    group.n_replicates,
-                )
-
-        ensemble_a = group_a[0]
-        ensemble_b = group_b[0]
 
         print(f"Starting ensemble comparison: {group_a.label} vs {group_b.label}")
         print("=" * 60)
         self._setup_output_directories()
 
-        print("Phase 1: Individual analyses...")
-        sim_a = self._analyse_one(ensemble_a.to_simulation(), group_a.label, analysis_config)
-        sim_b = self._analyse_one(ensemble_b.to_simulation(), group_b.label, analysis_config)
+        # Statistical comparison first, over the full groups.
+        print("Phase 1: Per-residue statistical comparison...")
+        statistical_comparison = self._run_statistical_comparison(group_a, group_b)
 
-        print("Phase 2: Comparative analysis...")
+        for group in (group_a, group_b):
+            if getattr(group, "has_replicates", False):
+                logger.warning(
+                    "Condition %r has %d replicates; the descriptive comparisons "
+                    "(network, dynamics, energetics, kinetics, allosteric) use only "
+                    "the first. The statistical comparison uses all of them.",
+                    group.label,
+                    group.n_replicates,
+                )
+
+        print("Phase 2: Individual analyses...")
+        sim_a = self._analyse_one(group_a[0].to_simulation(), group_a.label, analysis_config)
+        sim_b = self._analyse_one(group_b[0].to_simulation(), group_b.label, analysis_config)
+
+        print("Phase 3: Descriptive comparative analysis...")
         comparison_results = self._run_comparative_analyses(sim_a, sim_b)
 
-        print("Phase 3: Generating comprehensive results...")
+        print("Phase 4: Generating comprehensive results...")
         differential_results = self._compile_comprehensive_results(
-            sim_a, sim_b, comparison_results, (group_a.label, group_b.label)
+            sim_a, sim_b, comparison_results, (group_a.label, group_b.label), statistical_comparison
         )
 
-        print("Phase 4: Creating outputs and reports...")
+        print("Phase 5: Creating outputs and reports...")
         self._generate_outputs(differential_results)
 
         print("✓ Comparison complete!")
         print(f"Results available in: {self.output_dir}")
         return differential_results
+
+    def _run_statistical_comparison(self, group_a: Any, group_b: Any) -> ComparisonReport | None:
+        """Run the per-residue statistical comparison over the full groups.
+
+        Failures here (e.g. an unsupported feature, or systems that do not match)
+        are logged and yield ``None`` rather than aborting the whole comparison,
+        so the descriptive analysis still runs.
+        """
+        from .features import compare_ensemble_groups
+
+        try:
+            return compare_ensemble_groups(
+                group_a,
+                group_b,
+                feature=self.config.statistical_feature,
+                correction=self.config.multiple_comparison_correction,  # type: ignore[arg-type]
+                alpha=self.config.alpha,
+            )
+        except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not fatal
+            logger.warning("Statistical comparison could not be computed: %s", exc)
+            return None
 
     def _analyse_one(
         self, simulation: MDSimulation, label: str, analysis_config: AnalysisConfig
@@ -399,6 +430,7 @@ class DifferentialAnalyzer:
         sim2: MDSimulation,
         comparison_results: dict[str, Any],
         sim_names: tuple[str, str],
+        statistical_comparison: ComparisonReport | None = None,
     ) -> ComprehensiveDifferentialResults:
         """Compile all results into comprehensive differential results object"""
 
@@ -413,6 +445,7 @@ class DifferentialAnalyzer:
             energetics_comparison=comparison_results.get("energetics"),
             kinetics_comparison=comparison_results.get("kinetics"),
             allosteric_comparison=comparison_results.get("allosteric"),
+            statistical_comparison=statistical_comparison,
         )
 
     def _generate_outputs(self, results: ComprehensiveDifferentialResults):
@@ -424,6 +457,8 @@ class DifferentialAnalyzer:
         with open(self.output_dir / "comprehensive_differential_results.pkl", "wb") as f:
             pickle.dump(results, f)
 
+        if results.statistical_comparison is not None:
+            self._create_statistical_comparison_csv(results.statistical_comparison)
         self._create_csv_reports(results)
         self._create_visualizations(results)
 
@@ -432,6 +467,70 @@ class DifferentialAnalyzer:
             self._create_html_report(results)
 
         print("  ✓ Output generation complete")
+
+    def _create_statistical_comparison_csv(self, report: ComparisonReport):
+        """Write the per-residue statistical comparison to CSV.
+
+        One row per residue, ordered by descending absolute effect size, with
+        the effect size and its confidence interval first and the raw and
+        corrected p-values after -- effect sizes lead (DECISIONS.md D-004). A
+        header block records the correction family and, where relevant, the
+        design's power limit or the single-run caveat, so the file is
+        self-describing.
+        """
+        import csv
+
+        path = self.subdirs["reports"] / "per_residue_statistics.csv"
+        with open(path, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow([f"# mode: {report.mode}"])
+            writer.writerow(
+                [
+                    f"# correction: {report.correction}  alpha: {report.alpha}  "
+                    f"n_tests: {report.n_tests}  n_significant: {report.n_significant}"
+                ]
+            )
+            if report.underpowered:
+                writer.writerow(
+                    [
+                        f"# UNDERPOWERED: min attainable p = {report.min_pvalue:.3g} > alpha; "
+                        "no residue can reach significance. Read the effect sizes."
+                    ]
+                )
+            if report.caveat:
+                writer.writerow([f"# {report.caveat}"])
+            writer.writerow(
+                [
+                    "residue",
+                    "effect_size",
+                    "effect_size_name",
+                    "effect_ci_low",
+                    "effect_ci_high",
+                    "mean_a",
+                    "mean_b",
+                    "difference",
+                    "pvalue",
+                    "qvalue",
+                    "significant",
+                ]
+            )
+            for feature in report.ranked_by_effect():
+                writer.writerow(
+                    [
+                        feature.feature,
+                        f"{feature.effect_size:.6g}",
+                        feature.effect_size_name,
+                        f"{feature.effect_ci.low:.6g}",
+                        f"{feature.effect_ci.high:.6g}",
+                        f"{feature.mean_a:.6g}",
+                        f"{feature.mean_b:.6g}",
+                        f"{feature.difference:.6g}",
+                        f"{feature.pvalue:.6g}",
+                        f"{feature.qvalue:.6g}",
+                        int(feature.significant),
+                    ]
+                )
+        print(f"  ✓ Per-residue statistics: {path}")
 
     def _create_csv_reports(self, results: ComprehensiveDifferentialResults):
         """Generate CSV reports for all comparison results"""

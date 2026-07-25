@@ -190,11 +190,33 @@ class TestConfigIntegration:
 
 
 class TestOutputHonesty:
-    def test_descriptive_only_notice_mentions_the_missing_machinery(self):
-        notice = cli._DESCRIPTIVE_ONLY_NOTICE
-        assert "descriptive" in notice
-        for missing in ("Significance", "effect sizes", "multiple-testing correction"):
-            assert missing in notice
+    def test_descriptive_only_notice_is_gone(self):
+        """The blanket 'descriptive only' disclaimer is removed now stats exist."""
+        assert not hasattr(cli, "_DESCRIPTIVE_ONLY_NOTICE")
+
+    def test_statistical_summary_leads_with_effect_sizes(self, capsys):
+        """The summary prints effect sizes with CIs, not p-values first."""
+        from confdelta.compare import compare_feature_matrices
+
+        rng = __import__("numpy").random.default_rng(0)
+        a = rng.normal(3.0, 0.5, size=(8, 3))
+        b = rng.normal(0.0, 0.5, size=(8, 3))
+        report = compare_feature_matrices(a, b, feature_names=["A_1", "A_2", "A_3"], rng=0)
+        cli._print_statistical_summary(report)
+        out = capsys.readouterr().out
+        assert "Largest effects" in out
+        assert "CI" in out
+        assert "correction:" in out
+
+    def test_underpowered_design_is_flagged_in_output(self, capsys):
+        from confdelta.compare import compare_feature_matrices
+
+        rng = __import__("numpy").random.default_rng(1)
+        a = rng.normal(50.0, 0.5, size=(3, 2))
+        b = rng.normal(0.0, 0.5, size=(3, 2))
+        report = compare_feature_matrices(a, b, rng=0)
+        cli._print_statistical_summary(report)
+        assert "UNDERPOWERED" in capsys.readouterr().out
 
     def test_no_executive_summary_is_printed(self):
         """The fabricated executive summary must not return."""

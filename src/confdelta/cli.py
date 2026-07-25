@@ -30,11 +30,45 @@ from .differential import DifferentialAnalyzer, DifferentialConfig
 from .ensemble import Ensemble, EnsembleError, EnsembleGroup
 from .utils import PerformanceMonitor, save_analysis_config
 
-_DESCRIPTIVE_ONLY_NOTICE = (
-    "Note: confdelta currently reports descriptive differences only. Significance\n"
-    "testing, effect sizes and multiple-testing correction are not yet implemented.\n"
-    "Do not interpret any difference reported here as statistically significant."
-)
+
+def _print_statistical_summary(report) -> None:
+    """Print the per-residue statistical comparison, effect sizes first."""
+    if report is None:
+        print("\nPer-residue statistical comparison: not available.")
+        return
+
+    print("\nPer-residue statistical comparison")
+    print("-" * 70)
+    print(f"  mode:       {report.mode}")
+    print(
+        f"  correction: {report.correction}  (alpha {report.alpha}, "
+        f"{report.n_tests} residues tested)"
+    )
+
+    if report.underpowered:
+        print(
+            f"  UNDERPOWERED: the smallest p-value this design can produce is "
+            f"{report.min_pvalue:.3g}, above alpha, so no residue can reach\n"
+            f"  significance regardless of effect size. Read the effect sizes below."
+        )
+    else:
+        print(f"  significant residues (q <= {report.alpha}): {report.n_significant}")
+
+    if report.caveat:
+        # Wrap the single-run caveat under a clear marker.
+        print("  caveat: " + report.caveat.replace("\n", "\n          "))
+
+    ranked = report.ranked_by_effect()[:10]
+    print("\n  Largest effects (residue: effect size [95% CI], q):")
+    for feature in ranked:
+        marker = "*" if feature.significant else " "
+        print(
+            f"   {marker} {feature.feature:<10} "
+            f"{feature.effect_size:+.2f} "
+            f"[{feature.effect_ci.low:+.2f}, {feature.effect_ci.high:+.2f}]  "
+            f"q={feature.qvalue:.3g}"
+        )
+    print("\n  Full table: <output>/07_comprehensive_report/per_residue_statistics.csv")
 
 
 # ---------------------------------------------------------------------------
@@ -171,8 +205,14 @@ def run_compare(args: argparse.Namespace) -> int:
     print("\n" + "=" * 70)
     print(f"COMPARISON: {results.simulation_names[0]} vs {results.simulation_names[1]}")
     print("=" * 70)
-    print(f"Comparisons computed: {', '.join(computed) if computed else 'none'}")
-    print(f"\n{_DESCRIPTIVE_ONLY_NOTICE}")
+
+    _print_statistical_summary(results.statistical_comparison)
+
+    print(f"\nDescriptive comparisons computed: {', '.join(computed) if computed else 'none'}")
+    print(
+        "  (difference matrices, centrality and modularity deltas, pathway changes;\n"
+        "   descriptive only -- see the statistical comparison above for inference)"
+    )
 
     monitor.print_summary()
     print(f"\nResults saved to: {args.output}")

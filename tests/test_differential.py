@@ -41,20 +41,27 @@ class TestDifferentialConfig:
         [
             "perform_statistical_tests",
             "significance_threshold",
-            "multiple_comparison_correction",
             "bootstrap_iterations",
             "permutation_iterations",
         ],
     )
-    def test_statistics_options_are_not_advertised(self, removed):
-        """Options promising statistics that do not exist must stay removed.
+    def test_unimplemented_statistics_options_are_not_advertised(self, removed):
+        """Options for machinery that still does not exist must stay removed.
 
-        Each of these was settable and never read by any code path. They will
-        return with the statistical core, not before.
+        The resampling counts are engine function parameters, not config, and
+        the statistics always run, so these have no config surface. (Contrast
+        multiple_comparison_correction and alpha, which are now real and used.)
         """
         assert not hasattr(DifferentialConfig(), removed)
         with pytest.raises(TypeError):
             DifferentialConfig(**{removed: 1})
+
+    def test_real_statistics_options_are_present_and_used(self):
+        """The correction method and alpha are now genuine, consumed options."""
+        cfg = DifferentialConfig(multiple_comparison_correction="fdr_by", alpha=0.01)
+        assert cfg.multiple_comparison_correction == "fdr_by"
+        assert cfg.alpha == 0.01
+        assert cfg.statistical_feature == "contacts"
 
 
 class TestDifferentialAnalyzer:
