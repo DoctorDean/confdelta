@@ -48,8 +48,10 @@ with mda.Writer("wt_ensemble.pdb", ca.n_atoms, multiframe=True) as w:
         w.write(ca)
 ```
 
-Repeat for the disulfide construct (`ds_ensemble.pdb`). If you have several
-independent runs per condition, write one file per run
+Repeat for the disulfide construct (`ds_ensemble.pdb`), and for the second
+construct used by the contrast (`ds_g16c_l38c_ensemble.pdb`; see
+[contrast.py](contrast.py) and the README's specificity section). If you have
+several independent runs per condition, write one file per run
 (`wt_rep1.pdb`, `wt_rep2.pdb`, ...) and pass them all to `reproduce.py`; that
 enables replicate-mode inference (a permutation test over replicate-level RMSF),
 which is stronger than the single-run block bootstrap.

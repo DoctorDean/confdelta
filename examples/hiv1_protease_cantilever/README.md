@@ -86,6 +86,37 @@ regions — the quantitative echo of the paper's flap-curling result, now as an
 effect size with a confidence interval and a corrected q-value per residue. The
 regression test ([test_flagship.py](test_flagship.py)) asserts it.
 
+## Specificity: a different cross-link, different dynamics
+
+The finding is about *the cantilever* gating the flaps — not about disulfide
+cross-linking in general. `contrast.py` makes that point with a second construct,
+**G16C/L38C**, which clamps the fulcrum (16) to the elbow (38) — the flap's hinge
+— instead of the cantilever:
+
+```bash
+python contrast.py   # writes results/cross_link_contrast.png
+```
+
+Mean Cα RMSF by region, each construct against wild type:
+
+| Region | WT | A71C/Q92C Δ | G16C/L38C Δ |
+|---|---|---|---|
+| flap (43–58) | 1.57 | −0.63 | −0.25 |
+| **flap tips (48–52)** | **2.93** | **−1.42** | **+0.01** |
+| cantilever (62–78) | 1.19 | −0.29 | −0.30 |
+
+Both cross-links rigidify the cantilever similarly, but only the **cantilever**
+cross-link (A71C/Q92C) quiets the flap tips (2.93 → 1.50 Å); the fulcrum–elbow
+cross-link leaves them fully mobile (2.93 → 2.94 Å). Same enzyme, same method,
+two disulfides — two different dynamical signatures, which confdelta resolves.
+`test_contrast.py` guards it.
+
+This is a descriptive, region-level companion to the rigorous per-residue
+comparison above. One honesty note: because both comparisons share the single
+wild-type run, the *similar* cantilever reduction is the part least separable
+from run-to-run variation; the **flap-tip contrast** — where the two constructs
+plainly disagree — is the robust signal.
+
 ## Making it stronger
 
 A single 100 ns run per condition is the honest weak point (hence the block
