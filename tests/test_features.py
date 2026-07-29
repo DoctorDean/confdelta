@@ -7,8 +7,10 @@ import pytest
 
 from confdelta import Ensemble, EnsembleGroup
 from confdelta.features import (
+    FEATURES,
     compare_ensemble_groups,
     per_residue_contact_counts,
+    per_residue_rmsf,
 )
 from tests.conftest import _base_ca_coords
 
@@ -70,6 +72,75 @@ class TestPerResidueContactCounts:
         _, compact_counts = per_residue_contact_counts(e_compact)
         _, spread_counts = per_residue_contact_counts(e_spread)
         assert compact_counts.sum() > spread_counts.sum()
+
+
+def _rigid_variations(base, n_frames, seed):
+    """Frames that are the same rigid body under random rotation + translation."""
+    rng = np.random.default_rng(seed)
+    frames = np.empty((n_frames, base.shape[0], 3), dtype=np.float32)
+    for f in range(n_frames):
+        q, r = np.linalg.qr(rng.normal(size=(3, 3)))
+        q = q @ np.diag(np.sign(np.diag(r)))  # make the rotation deterministic in sign
+        if np.linalg.det(q) < 0:
+            q[:, 0] *= -1
+        frames[f] = (base @ q.T + rng.normal(0, 5, size=3)).astype(np.float32)
+    return frames
+
+
+class TestPerResidueRMSF:
+    def test_shape_labels_and_non_negative(self, ca_topology_pdb):
+        ens = _ensemble(ca_topology_pdb, spread=0.3, n_frames=12, seed=0, name="e")
+        labels, values = per_residue_rmsf(ens)
+        assert labels == [f"A_{i}" for i in range(1, 9)]
+        assert values.shape == (12, 8)
+        assert (values >= 0).all()  # per-frame squared displacements
+
+    def test_rigid_body_motion_gives_near_zero_fluctuation(self, ca_topology_pdb):
+        # A rigidly tumbling body has no internal fluctuation once superposed.
+        frames = _rigid_variations(_base_ca_coords(8), n_frames=30, seed=1)
+        ens = Ensemble.from_coordinates(frames, ca_topology_pdb, selection="name CA", name="rigid")
+        _, values = per_residue_rmsf(ens)
+        rmsf = np.sqrt(values.mean(axis=0))
+        assert rmsf.max() < 0.05
+
+    def test_recovers_localised_fluctuation(self, ca_topology_pdb):
+        # Jitter one residue isotropically; alignment on the 7 fixed atoms leaves
+        # its RMSF ~ sigma*sqrt(3), and the rest near zero.
+        base = _base_ca_coords(8)
+        sigma = 0.25
+        rng = np.random.default_rng(2)
+        frames = np.repeat(base[None], 800, axis=0).astype(np.float32)
+        frames[:, 4, :] += rng.normal(0, sigma, size=(800, 3)).astype(np.float32)
+        ens = Ensemble.from_coordinates(frames, ca_topology_pdb, selection="name CA", name="one")
+        _, values = per_residue_rmsf(ens)
+        rmsf = np.sqrt(values.mean(axis=0))
+        others = np.delete(rmsf, 4)
+        assert rmsf[4] > 3 * np.median(others)
+        assert 0.6 * sigma * np.sqrt(3) < rmsf[4] < 1.4 * sigma * np.sqrt(3)
+
+    def test_more_mobile_ensemble_has_higher_rmsf(self, ca_topology_pdb):
+        calm = _ensemble(ca_topology_pdb, spread=0.15, n_frames=200, seed=3, name="calm")
+        wobbly = _ensemble(ca_topology_pdb, spread=0.6, n_frames=200, seed=3, name="wob")
+        _, vc = per_residue_rmsf(calm)
+        _, vw = per_residue_rmsf(wobbly)
+        assert np.sqrt(vw.mean(0)).mean() > np.sqrt(vc.mean(0)).mean()
+
+    def test_registered_and_usable_via_compare(self, ca_topology_pdb):
+        assert "rmsf" in FEATURES
+        a = EnsembleGroup(
+            [_ensemble(ca_topology_pdb, spread=0.2, n_frames=120, seed=1, name="a")], label="a"
+        )
+        b = EnsembleGroup(
+            [_ensemble(ca_topology_pdb, spread=0.6, n_frames=120, seed=2, name="b")], label="b"
+        )
+        report = compare_ensemble_groups(a, b, feature="rmsf", rng=0)
+        assert report.mode == "bootstrap"
+        assert len(report.features) == 8
+        # mean_a/mean_b are per-frame MSF; the wobblier ensemble has larger MSF.
+        assert all(f.mean_a >= 0 and f.mean_b >= 0 for f in report.features)
+        assert np.mean([f.mean_b for f in report.features]) > np.mean(
+            [f.mean_a for f in report.features]
+        )
 
 
 class TestCompareEnsembleGroups:

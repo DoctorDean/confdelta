@@ -116,7 +116,7 @@ with a default the user did not intend and never finding out.
 | `compare_energetics` | `True` |  |
 | `compare_kinetics` | `True` |  |
 | `compare_allosteric` | `True` |  |
-| `statistical_feature` | `'contacts'` | Per-residue feature tested; see confdelta.features.FEATURES |
+| `statistical_feature` | `'contacts'` | Per-residue feature tested: `'contacts'` (packing) or `'rmsf'` (mobility); see confdelta.features.FEATURES |
 | `multiple_comparison_correction` | `'fdr_bh'` | fdr_bh, fdr_by, bonferroni, none |
 | `alpha` | `0.05` | Significance threshold on corrected q-values |
 | `create_publication_figures` | `False` |  |

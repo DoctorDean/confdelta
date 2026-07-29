@@ -1,15 +1,22 @@
 """Regression test for the HIV-1 protease cantilever flagship.
 
-Runs the wild-type vs cantilever-disulfide comparison on the committed ensemble
-files and asserts the paper's finding: the significant per-residue changes
-concentrate in the flap and cantilever regions rather than scattering across the
+Runs the wild-type vs cantilever-disulfide (A71C/Q92C) comparison of per-residue
+mobility (RMSF) on the committed ensemble files and asserts the paper's finding:
+immobilising the cantilever rigidifies the cantilever and flaps, so the largest
+per-residue mobility changes localise there rather than scattering across the
 enzyme.
 
-The test **skips** until the ensemble files are committed to this directory (see
-prepare_ensembles.md). Once they are present it runs in CI, so a future change
-that breaks the reproduction fails the build. The thresholds below encode the
-qualitative published claim (a majority of the significant residues fall in the
-flap/cantilever regions); tighten them against the real run when the data lands.
+Localisation is read from the *largest* effects, not from the fraction of all
+significant residues: with one 100 ns run per condition the block bootstrap
+over-powers "significance" (most residues clear q<=alpha), so the fraction of
+significant residues in any region just tracks that region's size. Where the
+biggest, most reliable changes fall is the robust, faithful echo of the paper's
+localised result. Replicate ensembles would sharpen this to a permutation test;
+see prepare_ensembles.md.
+
+The test **skips** until the ensemble files are committed to this directory.
+Once present it runs in CI, so a future change that breaks the reproduction
+fails the build.
 """
 
 from __future__ import annotations
@@ -51,7 +58,7 @@ def report():
     ds = _group("ds_ensemble", "disulfide") or _group("ds", "disulfide")
     if wt is None or ds is None:
         pytest.skip("Flagship ensemble files not committed yet; see prepare_ensembles.md.")
-    return compare_ensemble_groups(wt, ds, correction="fdr_bh", alpha=0.05, rng=0)
+    return compare_ensemble_groups(wt, ds, feature="rmsf", correction="fdr_bh", alpha=0.05, rng=0)
 
 
 def test_some_residues_change_significantly(report):
@@ -62,21 +69,24 @@ def test_some_residues_change_significantly(report):
     assert report.n_significant > 0
 
 
-def test_significant_changes_concentrate_in_flap_and_cantilever(report):
-    if report.underpowered or report.n_significant == 0:
-        pytest.skip("no significant residues to localise")
-    significant = report.significant_features()
-    in_finding = [f for f in significant if region_of(resid_of_label(f.feature)) in FINDING_REGIONS]
-    fraction = len(in_finding) / len(significant)
-    # The published finding: the change is localised to the flaps and cantilever.
-    assert fraction >= 0.5, (
-        f"only {fraction:.0%} of significant residues fall in the flap/cantilever "
-        "regions; the reproduction expects a majority there."
+def test_largest_mobility_changes_localise_to_flap_and_cantilever(report):
+    # The published finding, read from the largest effects (see module docstring
+    # for why not "fraction of all significant"): a clear majority of the ten
+    # biggest per-residue mobility changes fall in the flap/cantilever regions.
+    top = report.ranked_by_effect()[:10]
+    in_finding = [f for f in top if region_of(resid_of_label(f.feature)) in FINDING_REGIONS]
+    assert len(in_finding) >= 7, (
+        f"only {len(in_finding)}/10 of the largest mobility changes fall in the "
+        "flap/cantilever regions; the reproduction expects them concentrated there."
     )
 
 
-def test_largest_effect_is_in_a_finding_region(report):
+def test_largest_effect_is_cantilever_rigidification(report):
+    # The single biggest, most reliable change is a residue of the flap/cantilever
+    # becoming *less* mobile -- the cross-link immobilising what it was designed to.
     if report.underpowered:
         pytest.skip("design underpowered")
     top = report.ranked_by_effect()[0]
     assert region_of(resid_of_label(top.feature)) in FINDING_REGIONS
+    # mean_a is wild-type MSF, mean_b the disulfide's; rigidification means a > b.
+    assert top.mean_a > top.mean_b, "largest effect should be a loss of mobility (rigidification)"

@@ -13,6 +13,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-residue mobility feature** `per_residue_rmsf` (registry name `"rmsf"`):
+  Kabsch-superposes each frame onto the ensemble mean and returns the per-frame
+  squared displacement per residue, so mobility (RMSF) is compared with the same
+  effect-size / block-bootstrap / FDR engine as contact number. Selectable via
+  `compare_ensemble_groups(feature="rmsf")` and the `statistical_feature` config.
+- **Flagship reproduction, from committed data.** The HIV-1 protease cantilever
+  example (`examples/hiv1_protease_cantilever/`) now reproduces the published
+  finding on real 100 ns MD ensembles: wild-type vs the **A71C/Q92C** cantilever
+  disulfide, compared by per-residue RMSF. The ten largest mobility changes are
+  90% in the flap/cantilever regions and the cross-link site is immobilised from
+  1.78 to 0.69 A; `test_flagship.py` guards this in CI (no longer skipped).
+- **Cross-link contrast panel** (`contrast.py`, `test_contrast.py`): a second
+  construct, G16C/L38C (fulcrum-elbow), shown against A71C/Q92C to demonstrate
+  specificity — only the cantilever cross-link quiets the flap tips (RMSF
+  2.93 -> 1.50 A vs 2.93 -> 2.94 A), the mechanistic point of the paper.
+
+### Changed
+
+- The Kabsch superposition behind `interface_rmsf` moved to a shared private
+  helper (`confdelta._align.superpose_to_mean`), now reused by the mobility
+  feature. Behaviour is unchanged.
+
 ### Removed
 
 - The CLI's blanket "descriptive differences only" disclaimer, now that the

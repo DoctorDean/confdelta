@@ -23,6 +23,7 @@ from collections.abc import Callable
 
 import numpy as np
 
+from ._align import superpose_to_mean
 from .compare import ComparisonReport, compare_feature_matrices, compare_frame_matrices
 from .ensemble import Ensemble, EnsembleGroup
 from .stats import CorrectionMethod, RandomState
@@ -32,6 +33,7 @@ logger = logging.getLogger("confdelta")
 __all__ = [
     "FeatureExtractor",
     "per_residue_contact_counts",
+    "per_residue_rmsf",
     "compare_ensemble_groups",
     "FEATURES",
 ]
@@ -114,9 +116,87 @@ def per_residue_contact_counts(
     return labels, values
 
 
+def per_residue_rmsf(
+    ensemble: Ensemble,
+    *,
+    align_selection: str | None = None,
+) -> tuple[list[str], np.ndarray]:
+    """Per-frame per-residue squared fluctuation about the aligned mean.
+
+    Rigid-body motion is removed by superposing every frame onto the ensemble
+    mean (Kabsch, on the *align_selection* atoms, default: all atoms of the
+    ensemble), then each residue's squared displacement from its mean position is
+    returned per frame. The per-frame mean of this quantity is the residue's
+    mean-square fluctuation (MSF); its square root is the familiar RMSF.
+
+    Because it is a *per-frame* quantity, it feeds the same permutation /
+    block-bootstrap engine that compares contact numbers, so "does this residue
+    move differently between the two conditions?" is answered with an effect
+    size, a confidence interval and a corrected q-value like any other feature.
+    It measures mobility directly, which local packing (``contacts``) does not.
+
+    Parameters
+    ----------
+    ensemble
+        The ensemble to analyse.
+    align_selection
+        MDAnalysis selection for the atoms the rigid-body fit is computed on.
+        ``None`` (default) fits on every atom of the ensemble; passing a stable
+        subset (e.g. a rigid core) measures the mobility of the rest against it.
+
+    Returns
+    -------
+    (labels, values)
+        ``labels`` are the residue identifiers (``"A_50"`` ...); ``values`` has
+        shape ``(n_frames, n_residues)`` and holds squared displacement in
+        angstrom^2. A comparison's per-condition mean of a residue's column is
+        its MSF, so ``sqrt(mean_a)`` and ``sqrt(mean_b)`` recover the two RMSF
+        profiles.
+    """
+    # to_simulation() prints progress; silence it for this internal use.
+    with contextlib.redirect_stdout(io.StringIO()):
+        sim = ensemble.to_simulation()
+
+    labels = [str(k) for k in sim.unique_residue_keys]
+    n_res = sim.n_residues
+    atom_res = np.asarray(sim._atom_to_residue_map)
+    atoms = sim._atoms
+    n_atoms = len(atom_res)
+
+    n_frames = ensemble.n_frames
+    coords = np.empty((n_frames, n_atoms, 3), dtype=float)
+    for frame_index, _ in enumerate(sim.universe.trajectory):
+        coords[frame_index] = atoms.positions
+
+    # Atoms used for the rigid-body fit: an explicit selection, or all atoms.
+    if align_selection is None:
+        align_cols = np.arange(n_atoms)
+    else:
+        chosen = sim.universe.select_atoms(align_selection)
+        position_of = {atom_ix: col for col, atom_ix in enumerate(atoms.ix)}
+        align_cols = np.array([position_of[a] for a in chosen.ix if a in position_of], dtype=int)
+        if align_cols.size == 0:
+            raise ValueError(
+                f"align_selection {align_selection!r} matched no atoms in the ensemble selection."
+            )
+
+    aligned = superpose_to_mean(coords, align_cols)
+    mean_pos = aligned.mean(axis=0)
+    sq_atom = ((aligned - mean_pos) ** 2).sum(axis=2)  # (n_frames, n_atoms), angstrom^2
+
+    # Reduce atoms -> residues: mean squared displacement over each residue's atoms.
+    atoms_per_res = np.bincount(atom_res, minlength=n_res).astype(float)
+    atoms_per_res[atoms_per_res == 0.0] = 1.0
+    membership = np.zeros((n_res, n_atoms), dtype=float)
+    membership[atom_res, np.arange(n_atoms)] = 1.0
+    values = (sq_atom @ membership.T) / atoms_per_res
+    return labels, values
+
+
 # Registry of named feature extractors, so the CLI/config can select by name.
 FEATURES: dict[str, FeatureExtractor] = {
     "contacts": per_residue_contact_counts,
+    "rmsf": per_residue_rmsf,
 }
 
 

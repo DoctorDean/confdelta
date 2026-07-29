@@ -12,39 +12,53 @@ effect, so treat it as a showcase rather than the validation.
 
 ## MD route (faithful reproduction)
 
-On the workstation, for each condition (wild-type and the cantilever-disulfide
-construct), subsample the production trajectory to CA atoms and ~50–100 frames
-and save it as a multi-model PDB. With GROMACS:
+This is how the committed `wt_ensemble.pdb` and `ds_ensemble.pdb` were made. For
+each condition (wild-type and the A71C/Q92C construct), subsample the production
+trajectory to CA atoms and ~100 frames and save it as a multi-model PDB. With
+GROMACS:
 
 ```bash
-# 1. Strip to CA atoms and take every Nth frame (tune -skip so ~50-100 frames
-#    remain), writing a multi-model PDB. Answer "C-alpha" (or make an index
-#    group) at the selection prompt.
-gmx trjconv -s topol.tpr -f traj.xtc \
-            -o wt_ensemble.pdb -pbc mol -ur compact \
-            -skip 50 <<< "C-alpha"
+# CA atoms, every 100th frame of a 100 ns / 10 ps-per-frame run -> 101 models.
+# -pbc nojump keeps the dimer spatially continuous: the two chains are separate
+# molecules, so -pbc mol can leave them on opposite sides of the box when the
+# complex straddles a boundary, which corrupts inter-chain distances. nojump
+# unwraps relative to the (whole) first frame and needs no image guessing.
+printf "C-alpha\n" | gmx trjconv -s md.tpr -f md.xtc \
+            -o wt_ensemble.pdb -pbc nojump -skip 100
 ```
 
-or equivalently with MDAnalysis, which avoids the interactive prompt:
+Because the RMSF feature superposes each frame itself, absolute position and slow
+box drift do not matter — only that each frame is a whole, continuous dimer,
+which `-pbc nojump` guarantees. Verify by checking the minimum inter-chain CA
+distance stays small across frames (a jump to tens of angstroms means a chain
+wrapped and the fix did not take).
+
+With MDAnalysis instead (avoids the interactive prompt), unwrap on the whole
+trajectory before writing:
 
 ```python
 import MDAnalysis as mda
+from MDAnalysis import transformations as trans
 
-u = mda.Universe("topol.tpr", "traj.xtc")
+u = mda.Universe("md.tpr", "md.xtc")
+u.trajectory.add_transformations(trans.unwrap(u.atoms))
 ca = u.select_atoms("name CA")
 with mda.Writer("wt_ensemble.pdb", ca.n_atoms, multiframe=True) as w:
-    for ts in u.trajectory[::50]:      # every 50th frame
+    for ts in u.trajectory[::100]:
         w.write(ca)
 ```
 
-Repeat for the disulfide construct (`ds_ensemble.pdb`). If you have several
-independent runs per condition, write one file per run
+Repeat for the disulfide construct (`ds_ensemble.pdb`), and for the second
+construct used by the contrast (`ds_g16c_l38c_ensemble.pdb`; see
+[contrast.py](contrast.py) and the README's specificity section). If you have
+several independent runs per condition, write one file per run
 (`wt_rep1.pdb`, `wt_rep2.pdb`, ...) and pass them all to `reproduce.py`; that
-enables replicate-mode inference, which is stronger than the single-run block
-bootstrap.
+enables replicate-mode inference (a permutation test over replicate-level RMSF),
+which is stronger than the single-run block bootstrap.
 
-Aim for a committed size under ~1 MB per file. CA-only at 50–100 frames for a
-198-residue dimer is comfortably within that.
+CA-only at ~100 frames for a 198-residue dimer is ~1.5 MB per file. Fewer frames
+shrink it further; the localisation is read from the largest effects and is
+stable down to ~50 frames.
 
 ## ColabFold route (source-agnostic showcase)
 

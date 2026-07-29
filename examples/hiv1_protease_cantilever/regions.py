@@ -20,10 +20,11 @@ REGION_RANGES: list[tuple[str, range]] = [
     ("cantilever", range(62, 79)),  # 62-78, per the paper
 ]
 
-# The engineered disulfide that immobilises the cantilever: G16C/L38C (fulcrum to
-# elbow) in each monomer. The cross-link sites are the perturbation; the finding
-# is the *response* at the flaps and cantilever.
-CROSSLINK_SITES: set[int] = {16, 38}
+# The engineered disulfide that immobilises the cantilever: A71C/Q92C in each
+# monomer (residue 71 sits inside the cantilever, 62-78; 92 anchors it to the
+# C-terminal strand). The cross-link sites are the perturbation; the finding is
+# the *response* -- the cantilever rigidifies and the flap tips curl in.
+CROSSLINK_SITES: set[int] = {71, 92}
 
 # The regions the paper's finding is about: immobilising the cantilever makes the
 # flap tips curl in and the protease favour a semi-open conformation. A faithful
