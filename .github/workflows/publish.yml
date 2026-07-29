@@ -1,0 +1,52 @@
+name: Publish to PyPI
+
+# Publishes confdelta to PyPI when a GitHub Release is published. Uses PyPI
+# Trusted Publishing (OIDC): no API token is stored in the repository. The
+# matching "pending publisher" must be configured once on PyPI before the first
+# release -- see docs/RELEASING.md.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Check metadata renders on PyPI
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/confdelta
+    permissions:
+      id-token: write # OIDC token for Trusted Publishing; no password/token needed
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
