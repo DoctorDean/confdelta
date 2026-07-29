@@ -91,6 +91,7 @@ all = [
 [project.urls]
 Homepage = "https://github.com/DoctorDean/confdelta"
 Repository = "https://github.com/DoctorDean/confdelta"
+Documentation = "https://github.com/DoctorDean/confdelta/tree/master/docs"
 Issues = "https://github.com/DoctorDean/confdelta/issues"
 Changelog = "https://github.com/DoctorDean/confdelta/blob/master/CHANGELOG.md"
 

@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use confdelta in your research, please cite it."
+title: "confdelta: statistically rigorous comparison of two protein conformational ensembles"
+abstract: >-
+  confdelta compares two protein conformational ensembles per residue with
+  effect sizes, confidence intervals and multiple-testing-corrected q-values,
+  choosing a replicate-level permutation test when replicates are supplied and a
+  block bootstrap over frames otherwise.
+type: software
+authors:
+  - family-names: Sherry
+    given-names: Dean
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add your ORCID here
+version: "0.1.0"
+date-released: "2026-07-29"
+license: MIT
+repository-code: "https://github.com/DoctorDean/confdelta"
+url: "https://github.com/DoctorDean/confdelta"
+keywords:
+  - conformational ensembles
+  - molecular dynamics
+  - statistics
+  - multiple testing correction
+  - protein dynamics
+  - structural biology
