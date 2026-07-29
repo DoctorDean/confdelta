@@ -603,3 +603,21 @@ tracks region size and is the wrong operationalisation; the localisation of the
 *largest, most reliable* effects is robust to that and is the faithful echo of
 the paper's claim. Replicates would upgrade this to the replicate-mode
 permutation test (D-005); the harness already accepts them.
+
+### D-038 · A second cross-link as a contrast panel, not just a second data point
+
+**Decision.** Ship the G16C/L38C construct in the flagship as a *contrast* to
+A71C/Q92C (`contrast.py`, `test_contrast.py`, a committed
+`ds_g16c_l38c_ensemble.pdb`), reporting region-level RMSF for both against the
+wild type rather than a second full per-residue statistical run.
+
+**Reasoning.** The published claim is specific — it is *the cantilever* that
+gates the flaps — and a lone reproduction cannot show specificity. The two
+cross-links make the point cleanly: A71C/Q92C (cantilever) drops flap-tip RMSF
+from 2.93 to 1.50 A, while G16C/L38C (fulcrum-elbow) leaves it at 2.94; both
+rigidify the cantilever similarly. The contrast lives at the region level
+because that is where the effect is legible and the test is deterministic; the
+rigorous per-residue effect-size/CI/q-value comparison remains `reproduce.py`.
+Honesty note carried in the README and the test design: both comparisons share
+the one wild-type run, so the *shared* cantilever reduction is the least certain
+part and the *flap-tip divergence* is the robust, construct-specific signal.

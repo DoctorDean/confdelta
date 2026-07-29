@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   disulfide, compared by per-residue RMSF. The ten largest mobility changes are
   90% in the flap/cantilever regions and the cross-link site is immobilised from
   1.78 to 0.69 A; `test_flagship.py` guards this in CI (no longer skipped).
+- **Cross-link contrast panel** (`contrast.py`, `test_contrast.py`): a second
+  construct, G16C/L38C (fulcrum-elbow), shown against A71C/Q92C to demonstrate
+  specificity — only the cantilever cross-link quiets the flap tips (RMSF
+  2.93 -> 1.50 A vs 2.93 -> 2.94 A), the mechanistic point of the paper.
 
 ### Changed
 
