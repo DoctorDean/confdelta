@@ -32,6 +32,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ._align import superpose_to_mean
 from .compare import ComparisonReport, compare_feature_matrices, compare_frame_matrices
 from .ensemble import Ensemble, EnsembleGroup
 from .stats import CorrectionMethod, RandomState
@@ -244,34 +245,6 @@ def interface_persistence(
 # ---------------------------------------------------------------------------
 
 
-def _superpose_to_mean(coords: np.ndarray, align_cols: np.ndarray) -> np.ndarray:
-    """Least-squares superpose every frame onto the mean using *align_cols* atoms.
-
-    ``coords`` is ``(n_frames, n_atoms, 3)``; ``align_cols`` indexes the atoms the
-    fit is computed on. Returns the aligned coordinates (all atoms). Uses the
-    Kabsch algorithm; no mass weighting.
-    """
-    aligned = coords.copy()
-    ref = coords[:, align_cols, :].mean(axis=0)
-    ref_centroid = ref.mean(axis=0)
-    ref_centered = ref - ref_centroid
-
-    for _ in range(2):  # two passes: fit to mean, recompute mean, refit
-        for f in range(aligned.shape[0]):
-            mobile = aligned[f, align_cols, :]
-            mob_centroid = mobile.mean(axis=0)
-            mob_centered = mobile - mob_centroid
-            h = mob_centered.T @ ref_centered
-            u, _, vt = np.linalg.svd(h)
-            d = np.sign(np.linalg.det(vt.T @ u.T))
-            rot = vt.T @ np.diag([1.0, 1.0, d]) @ u.T
-            aligned[f] = (aligned[f] - mob_centroid) @ rot.T + ref_centroid
-        ref = aligned[:, align_cols, :].mean(axis=0)
-        ref_centroid = ref.mean(axis=0)
-        ref_centered = ref - ref_centroid
-    return aligned
-
-
 def interface_rmsf(
     ensemble: Ensemble,
     selection: str,
@@ -310,7 +283,7 @@ def interface_rmsf(
     for f, _ in enumerate(universe.trajectory):
         frames[f] = ag.positions
 
-    aligned = _superpose_to_mean(frames, align_cols)
+    aligned = superpose_to_mean(frames, align_cols)
     target_coords = aligned[:, target_cols, :]
     mean_pos = target_coords.mean(axis=0)
     sq = ((target_coords - mean_pos) ** 2).sum(axis=2)  # (n_frames, n_target)
