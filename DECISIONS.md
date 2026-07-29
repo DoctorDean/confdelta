@@ -562,3 +562,44 @@ deprecation warning (and mis-worded guidance) in the installed MDAnalysis. A
 dozen lines of Kabsch superposition are dependency-stable, do not mutate the
 input, and are exactly testable -- a rigid-body-translated complex must show
 ~zero internal RMSF, which is asserted.
+
+### D-036 · A per-residue mobility (RMSF) feature, alongside contact number
+
+**Decision.** Add `per_residue_rmsf` to `confdelta.features` (registry name
+`"rmsf"`): each frame is Kabsch-superposed onto the ensemble mean, and the
+per-frame squared displacement of each residue from its mean position is
+returned. Its per-frame mean is the residue's MSF, so `sqrt(mean_a)` /
+`sqrt(mean_b)` in a report recover the two RMSF profiles.
+
+**Reasoning.** The contact-number feature is a packing proxy; it cannot express
+a *flexibility* change, which is what a great many ensemble comparisons — and
+the flagship finding — are actually about. Framing mobility as a *per-frame*
+quantity (squared displacement) lets it reuse the existing engine unchanged: the
+same block bootstrap / permutation test that compares contact numbers compares
+mobility. The Kabsch superposition is the one already written for
+`interface_rmsf`; it was factored into a private `_align.superpose_to_mean` so
+both callers share one implementation rather than duplicating it.
+
+### D-037 · Flagship reproduces on A71C/Q92C with RMSF; localisation read from the largest effects
+
+**Decision.** The flagship compares wild-type vs the **A71C/Q92C** cantilever
+disulfide (the maintainer's paper construct, correcting the earlier G16C/L38C
+placeholder in D-030) using the `rmsf` feature, on committed 101-frame CA
+ensembles from 100 ns MD. Success is asserted on the **largest** effects — a
+majority of the top-10 per-residue mobility changes fall in the flap/cantilever,
+and the single largest is a cantilever rigidification — not on the fraction of
+all significant residues.
+
+**Reasoning.** Two things surfaced when the real trajectories arrived, and both
+were verified before wiring anything (no fabricated pass). First, the shipped
+contact-number feature sees the cross-link's effect as a *global* semi-open
+rearrangement (cantilever, flaps, catalytic and elbow all shift), so the changes
+do not localise to flap/cantilever by contact number; per-residue RMSF, being a
+direct mobility measure, does — the ten largest RMSF changes are 90% in the
+flap/cantilever and the cross-link site drops from 1.78 to 0.69 A. Second, a
+single 100 ns run makes the block bootstrap over-power "significance" (99/198
+residues clear q<=0.05), so "fraction of significant residues in a region" just
+tracks region size and is the wrong operationalisation; the localisation of the
+*largest, most reliable* effects is robust to that and is the faithful echo of
+the paper's claim. Replicates would upgrade this to the replicate-mode
+permutation test (D-005); the harness already accepts them.
