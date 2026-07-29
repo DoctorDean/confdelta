@@ -113,6 +113,10 @@ confdelta = ["py.typed"]
 # "examples" is included so the flagship reproduction test runs in CI. It skips
 # until the ensemble data is committed, then guards the published result.
 testpaths = ["tests", "examples"]
+# Put the repo root on sys.path so the shared "from tests.conftest import ..."
+# helpers resolve under the plain `pytest` console script (which, unlike
+# `python -m pytest`, does not add the working directory).
+pythonpath = ["."]
 addopts = "-ra"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
