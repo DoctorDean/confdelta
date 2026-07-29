@@ -1,0 +1,21 @@
+{
+    "upload_type": "software",
+    "title": "confdelta: statistically rigorous comparison of two protein conformational ensembles",
+    "description": "confdelta compares two protein conformational ensembles and reports, per residue, what changed, by how much, and whether it is real: effect sizes with confidence intervals first, multiple-testing-corrected q-values second. It chooses a replicate-level permutation test when replicates are supplied and a block bootstrap over autocorrelated frames otherwise, and is explicit about when a design is too small to conclude anything.",
+    "creators": [
+        {
+            "name": "Sherry, Dean"
+        }
+    ],
+    "license": "MIT",
+    "access_right": "open",
+    "keywords": [
+        "conformational ensembles",
+        "molecular dynamics",
+        "statistics",
+        "multiple testing correction",
+        "protein dynamics",
+        "structural biology",
+        "computational biology"
+    ]
+}

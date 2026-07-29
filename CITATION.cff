@@ -14,6 +14,7 @@ authors:
 version: "0.1.0"
 date-released: "2026-07-29"
 license: MIT
+doi: "10.5281/zenodo.21678329"
 repository-code: "https://github.com/DoctorDean/confdelta"
 url: "https://github.com/DoctorDean/confdelta"
 keywords:

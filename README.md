@@ -5,6 +5,7 @@
 ![Python](https://img.shields.io/badge/python-3.10--3.13-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)
+[![DOI](https://zenodo.org/badge/1205859988.svg)](https://doi.org/10.5281/zenodo.21678329)
 
 Comparing two ensembles — wild-type against a mutant, apo against holo, one design against another — is something almost every MD study does and almost everyone hand-rolls in a notebook: subtract two averages, eyeball the difference, and rarely correct for having just run hundreds of per-residue comparisons at once. confdelta makes that comparison a first-class, tested operation: per residue it reports an **effect size with a confidence interval** and a **p-value corrected across all residues**, and it is honest about when a design is too small to conclude anything.
 
