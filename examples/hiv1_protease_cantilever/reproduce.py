@@ -6,10 +6,12 @@ cantilever by disulfide cross-linking makes the flap tips curl in and the
 protease favour a semi-open conformation (PubMed 39109919).
 
 This script runs confdelta's per-residue statistical comparison between a
-wild-type ensemble and a cantilever-disulfide ensemble and checks that the
-significant per-residue changes concentrate in the flap and cantilever regions
--- the paper's qualitative finding, expressed as a quantitative, FDR-corrected,
-per-residue result.
+wild-type ensemble and a cantilever-disulfide ensemble. The default feature is
+per-residue mobility (RMSF): the paper's finding is a flexibility result, so we
+ask where the cross-link changes mobility. The largest, most reliable per-residue
+changes concentrate in the cantilever and flaps -- the paper's qualitative
+finding, expressed as effect sizes with confidence intervals and FDR-corrected
+q-values, per residue.
 
 Each condition is one or more ensembles. Ensembles are read either as
 multi-model PDBs (e.g. ColabFold output, or an MD trajectory saved as models)
@@ -77,56 +79,93 @@ def _write_annotated_csv(report, path: Path) -> None:
             )
 
 
+def _chain_of(label: str) -> str:
+    return label.rpartition("_")[0]
+
+
 def _plot(report, path: Path) -> None:
-    """Per-residue effect-size figure with the flap and cantilever bands shaded."""
+    """Per-residue RMSF for both conditions, flap and cantilever bands shaded.
+
+    RMSF is recovered as ``sqrt(mean)`` of the per-frame squared-fluctuation
+    feature, per condition. Only meaningful for ``feature='rmsf'``.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import numpy as np
+    from regions import CROSSLINK_SITES
 
-    features = sorted(report.features, key=lambda f: resid_of_label(f.feature))
-    resids = [resid_of_label(f.feature) for f in features]
-    effects = [f.effect_size for f in features]
-    colors = ["#c1121f" if f.significant else "#adb5bd" for f in features]
+    feats = sorted(report.features, key=lambda f: (_chain_of(f.feature), resid_of_label(f.feature)))
+    x = np.arange(len(feats))
+    rmsf_wt = np.sqrt(np.clip([f.mean_a for f in feats], 0, None))
+    rmsf_ds = np.sqrt(np.clip([f.mean_b for f in feats], 0, None))
+    resids = [resid_of_label(f.feature) for f in feats]
+    in_find = [region_of(r) in FINDING_REGIONS for r in resids]
 
     fig, ax = plt.subplots(figsize=(11, 4))
-    # Shade the regions the finding is about (flap 43-58, cantilever 62-78).
-    for lo, hi, label in ((43, 58, "flap"), (62, 78, "cantilever")):
-        ax.axvspan(lo, hi, color="#4361ee", alpha=0.08)
-        ax.text(
-            (lo + hi) / 2,
-            ax.get_ylim()[1],
-            label,
-            ha="center",
-            va="bottom",
-            fontsize=9,
-            color="#4361ee",
-        )
-    # Mark the engineered cross-link sites (G16C / L38C).
-    for site in (16, 38):
-        ax.axvline(site, color="#2a9d8f", linewidth=0.9, linestyle=":")
-    ax.bar(resids, effects, color=colors, width=0.9)
-    ax.axhline(0, color="#343a40", linewidth=0.8)
-    ax.set_xlabel("residue number")
-    ax.set_ylabel("effect size (Hedges' g)")
-    ax.set_title("Per-residue change, wild-type vs cantilever-disulfide")
+    # Shade contiguous flap/cantilever stretches (in each chain).
+    start = None
+    for i, b in enumerate(in_find + [False]):
+        if b and start is None:
+            start = i
+        elif not b and start is not None:
+            ax.axvspan(start - 0.5, i - 0.5, color="#4361ee", alpha=0.08)
+            start = None
+    # Divider between the two chains, and the engineered cross-link sites.
+    n = len(feats)
+    if any(_chain_of(f.feature) == "B" for f in feats):
+        first_b = next(i for i, f in enumerate(feats) if _chain_of(f.feature) == "B")
+        ax.axvline(first_b - 0.5, color="#adb5bd", linewidth=0.8)
+    for i, r in enumerate(resids):
+        if r in CROSSLINK_SITES:
+            ax.axvline(i, color="#2a9d8f", linewidth=0.9, linestyle=":")
+    ax.plot(x, rmsf_wt, color="#343a40", linewidth=1.3, label="wild-type")
+    ax.plot(x, rmsf_ds, color="#c1121f", linewidth=1.3, label="A71C/Q92C")
+    ax.set_xlim(-0.5, n - 0.5)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel("residue (chain A then chain B)")
+    ax.set_ylabel(r"C$\alpha$ RMSF ($\mathrm{\AA}$)")
+    ax.set_title("Per-residue mobility, wild-type vs cantilever disulfide (A71C/Q92C)")
+    ax.legend(loc="upper right", frameon=False)
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
 
-def summarise(report) -> dict[str, float]:
-    """Return the headline numbers a regression test can assert on."""
+def _in_finding(feature) -> bool:
+    return region_of(resid_of_label(feature.feature)) in FINDING_REGIONS
+
+
+def summarise(report, top_k: int = 10) -> dict[str, float]:
+    """Return the headline numbers a regression test can assert on.
+
+    The localisation of the finding is read from the *largest* effects
+    (``top_k_fraction_in_finding_regions``), not from the fraction of all
+    significant residues: with one run per condition the block bootstrap
+    over-powers "significance" (most residues clear q<=alpha), so where the
+    biggest, most reliable changes fall is the faithful, robust echo of the
+    paper's localised result.
+    """
     significant = report.significant_features()
-    sig_in_finding = [
-        f for f in significant if region_of(resid_of_label(f.feature)) in FINDING_REGIONS
-    ]
-    fraction = len(sig_in_finding) / len(significant) if significant else 0.0
+    ranked = report.ranked_by_effect()
+    top = ranked[:top_k]
+    sig_in_finding = [f for f in significant if _in_finding(f)]
     return {
         "n_tested": report.n_tests,
         "n_significant": len(significant),
         "n_significant_in_flap_or_cantilever": len(sig_in_finding),
-        "fraction_of_significant_in_finding_regions": fraction,
+        "fraction_of_significant_in_finding_regions": (
+            len(sig_in_finding) / len(significant) if significant else 0.0
+        ),
+        "top_k": top_k,
+        "top_k_in_finding_regions": sum(_in_finding(f) for f in top),
+        "top_k_fraction_in_finding_regions": (
+            sum(_in_finding(f) for f in top) / len(top) if top else 0.0
+        ),
+        "largest_effect_region": (
+            region_of(resid_of_label(ranked[0].feature)) if ranked else "none"
+        ),
         "underpowered": report.underpowered,
         "mode": report.mode,
     }
@@ -141,6 +180,11 @@ def main() -> int:
         "--disulfide", nargs="+", required=True, help="Disulfide-construct ensemble PDB(s)"
     )
     parser.add_argument("--outdir", default="results", help="Output directory")
+    parser.add_argument(
+        "--feature",
+        default="rmsf",
+        help="Per-residue feature to compare: 'rmsf' (mobility, default) or 'contacts'",
+    )
     parser.add_argument("--correction", default="fdr_bh", help="Multiple-testing correction")
     parser.add_argument("--alpha", type=float, default=0.05, help="Significance threshold")
     parser.add_argument("--seed", type=int, default=0, help="RNG seed for resampling")
@@ -153,34 +197,50 @@ def main() -> int:
     disulfide = _load_condition(args.disulfide, "cantilever_disulfide")
 
     report = compare_ensemble_groups(
-        wt, disulfide, correction=args.correction, alpha=args.alpha, rng=args.seed
+        wt,
+        disulfide,
+        feature=args.feature,
+        correction=args.correction,
+        alpha=args.alpha,
+        rng=args.seed,
     )
 
     _write_annotated_csv(report, outdir / "per_residue_statistics.csv")
-    _plot(report, outdir / "per_residue_effect_sizes.png")
+    figure = outdir / "per_residue_rmsf.png" if args.feature == "rmsf" else None
+    if figure is not None:
+        _plot(report, figure)
 
     stats = summarise(report)
-    print(f"\nWild-type vs cantilever-disulfide  ({report.mode} mode)")
-    print("=" * 60)
+    is_rmsf = args.feature == "rmsf"
+    print(f"\nWild-type vs cantilever-disulfide (A71C/Q92C)  [{args.feature}, {report.mode} mode]")
+    print("=" * 64)
     if report.underpowered:
         print(f"UNDERPOWERED: p-value floor {report.min_pvalue:.3g} > alpha; read effect sizes.")
     if report.caveat:
         print(f"caveat: {report.caveat.splitlines()[0]}")
-    print(f"residues tested:              {stats['n_tested']}")
-    print(f"significant (q <= {args.alpha}):        {stats['n_significant']}")
+    print(f"residues tested:                 {stats['n_tested']}")
+    print(f"significant (q <= {args.alpha}):           {stats['n_significant']}")
     print(
-        f"  of which in flap/cantilever: {stats['n_significant_in_flap_or_cantilever']} "
-        f"({stats['fraction_of_significant_in_finding_regions']:.0%})"
+        f"largest {stats['top_k']} effects in flap/cantilever: "
+        f"{stats['top_k_in_finding_regions']}/{stats['top_k']} "
+        f"({stats['top_k_fraction_in_finding_regions']:.0%}); "
+        f"largest single effect is in the {stats['largest_effect_region']}"
     )
     print("\nLargest effects:")
     for f in report.ranked_by_effect()[:12]:
         region = region_of(resid_of_label(f.feature))
         mark = "*" if f.significant else " "
-        print(f"  {mark} {f.feature:<8} {region:<11} g={f.effect_size:+.2f} q={f.qvalue:.3g}")
-    print(
-        f"\nWrote {outdir/'per_residue_statistics.csv'} and "
-        f"{outdir/'per_residue_effect_sizes.png'}"
-    )
+        extra = ""
+        if is_rmsf:
+            extra = f"  RMSF {max(f.mean_a, 0) ** 0.5:.2f}->{max(f.mean_b, 0) ** 0.5:.2f} A"
+        print(
+            f"  {mark} {f.feature:<8} {region:<11} "
+            f"{f.effect_size_name}={f.effect_size:+.2f} q={f.qvalue:.3g}{extra}"
+        )
+    written = str(outdir / "per_residue_statistics.csv")
+    if figure is not None:
+        written += f" and {figure}"
+    print(f"\nWrote {written}")
     return 0
 
 
