@@ -621,3 +621,28 @@ rigorous per-residue effect-size/CI/q-value comparison remains `reproduce.py`.
 Honesty note carried in the README and the test design: both comparisons share
 the one wild-type run, so the *shared* cantilever reduction is the least certain
 part and the *flap-tip divergence* is the robust, construct-specific signal.
+
+### D-039 · The flagship's single-run effect does not survive a second replicate; caveat it and add longer replicates
+
+**Finding.** A two-replicate consistency check (rep 1 = committed data, rep 2 = an
+independent 100 ns run per condition) shows the rigid scaffold reproduces almost
+perfectly, but the flap/cantilever *mobility* differences do not. A71C/Q92C
+flap-tip RMSF is 1.50 A in rep 1 and 2.94 A in rep 2 (as mobile as wild-type);
+the cantilever DRMSF vs WT even flips sign between replicates (-0.29, then +0.21).
+The 2v2 replicate-mode comparison is underpowered (p-floor 0.33) and its largest
+effect sizes are noise-dominated (two-point within-condition variance).
+
+**Decision.** (1) Add a prominent sampling caveat to the flagship README,
+`reproduce.py` and `test_flagship.py`: the committed numbers are a single-run
+workflow demonstration, not a replicate-confirmed result. (2) Keep the committed
+data and the regression test as-is — the test guards the *computation* on the
+rep-1 data, which is still valid; it is not a claim that the science is settled.
+(3) Run longer replicates (250 ns, reps 3+) toward a replicate-mode flagship.
+
+**Reasoning.** The single-trajectory block bootstrap captured within-run error
+and reported q<=0.05 with a tidy localisation, but the between-run variation the
+caveat warns about is large enough to erase the effect — the flap response is
+slow and allosteric and 100 ns undersamples it. This is confdelta's own thesis
+demonstrated on its own flagship: the honest move is to say so plainly and fix it
+with sampling, not to quietly keep the over-confident number. Related:
+[[confdelta-release]].

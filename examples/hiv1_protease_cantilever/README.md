@@ -5,6 +5,20 @@ into a regression test: if a future change alters the answer, the test fails. It
 runs from **committed data** — two CA-only ensembles in this directory — so it
 needs no download and reproduces with one command.
 
+> ⚠️ **Sampling caveat — read before quoting these numbers.** The committed
+> result is a **single 100 ns run per condition** (bootstrap mode), and a
+> two-replicate check shows the headline effect is **not yet converged**. A
+> second, independent 100 ns replicate of A71C/Q92C gives flap-tip RMSF ≈ 2.9 Å —
+> as mobile as wild-type — versus 1.5 Å in the committed run; the cantilever
+> ΔRMSF even changes sign between replicates. The rigid scaffold reproduces
+> almost perfectly, but the flap/cantilever *mobility* differences do not at this
+> sampling: the flap response is slow and allosteric, and 100 ns undersamples it.
+> Treat the numbers below as a **demonstration of the workflow — and of
+> confdelta's single-run caveat doing its job** — not as a replicate-confirmed
+> result. A robust claim needs replicate mode (Path A) with ≥4–5 replicates per
+> condition and longer trajectories; 250 ns replicates are being run for exactly
+> this. See [DECISIONS.md](../../DECISIONS.md) (D-039).
+
 ## The question
 
 Sherry et al. identified a cryptic pocket on the *cantilever* of HIV-1 protease,

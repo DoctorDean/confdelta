@@ -5,6 +5,12 @@ Paper: a cryptic cantilever pocket on HIV-1 protease; immobilising the
 cantilever by disulfide cross-linking makes the flap tips curl in and the
 protease favour a semi-open conformation (PubMed 39109919).
 
+Sampling caveat: the committed ensembles are a single 100 ns run per condition,
+and a two-replicate check shows the flap-tip effect is not yet converged (see
+README.md and DECISIONS.md D-039). Read the result as a workflow demonstration,
+not a replicate-confirmed claim; a robust answer needs replicate mode with
+several longer trajectories per condition.
+
 This script runs confdelta's per-residue statistical comparison between a
 wild-type ensemble and a cantilever-disulfide ensemble. The default feature is
 per-residue mobility (RMSF): the paper's finding is a flexibility result, so we

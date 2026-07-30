@@ -14,6 +14,12 @@ biggest, most reliable changes fall is the robust, faithful echo of the paper's
 localised result. Replicate ensembles would sharpen this to a permutation test;
 see prepare_ensembles.md.
 
+This guards the *computation* on the committed single-run data — that the code
+still produces the rep-1 result — not a replicate-confirmed scientific claim. A
+two-replicate check shows the flap-tip effect is under-sampled at 100 ns and does
+not yet reproduce in magnitude (README.md, DECISIONS.md D-039); the fix is more
+and longer replicates, not a change to this assertion.
+
 The test **skips** until the ensemble files are committed to this directory.
 Once present it runs in CI, so a future change that breaks the reproduction
 fails the build.
