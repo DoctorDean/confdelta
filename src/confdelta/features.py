@@ -264,9 +264,7 @@ def compare_ensemble_groups(
     elif feature in FEATURES:
         extractor = FEATURES[feature]
     else:
-        raise ValueError(
-            f"Unknown feature {feature!r}. Available: {', '.join(sorted(FEATURES))}."
-        )
+        raise ValueError(f"Unknown feature {feature!r}. Available: {', '.join(sorted(FEATURES))}.")
 
     labels_a, frames_a = _labels_for_group(group_a, extractor)
     labels_b, frames_b = _labels_for_group(group_b, extractor)
