@@ -104,7 +104,8 @@ Other sources: `Ensemble.from_structures([...])`, `.from_pdb_models(path)`,
 
 confdelta is `0.1.0` and pre-1.0: the statistical comparison returns typed objects, but the
 descriptive comparators still return the loosely structured objects inherited from its
-predecessor, and one per-residue feature (contact number) is wired so far. Expect the API to
+predecessor. Features wired so far are per-residue **contact number** and **RMSF**, plus
+user-defined **geometric collective variables** (distances and angles). Expect the API to
 firm up before 1.0. It continues **MD-Compare**; see [CHANGELOG.md](CHANGELOG.md) for the
 lineage and [AUDIT.md](AUDIT.md) for an account of what was rebuilt and why.
 
@@ -112,6 +113,7 @@ lineage and [AUDIT.md](AUDIT.md) for an account of what was rebuilt and why.
 
 - [docs/INSTALL.md](docs/INSTALL.md) — installation and extras
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — every configuration option
+- [docs/geometric_cvs.md](docs/geometric_cvs.md) — measuring custom distances and angles
 - [docs/examples/README.md](docs/examples/README.md) — worked examples
 
 ## Licence
