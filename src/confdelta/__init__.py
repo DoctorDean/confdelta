@@ -57,6 +57,7 @@ from .differential import (
 )
 from .ensemble import Ensemble, EnsembleError, EnsembleGroup
 from .features import compare_ensemble_groups
+from .geometry import geometric_features
 from .interface import (
     InterfacePersistence,
     binder_preorganisation,
@@ -72,6 +73,7 @@ __all__ = [
     "EnsembleError",
     # Statistical comparison (the core capability).
     "compare_ensemble_groups",
+    "geometric_features",
     "ComparisonReport",
     "FeatureComparison",
     # Interface persistence (design triage).

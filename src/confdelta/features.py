@@ -224,20 +224,20 @@ def compare_ensemble_groups(
     group_a: EnsembleGroup,
     group_b: EnsembleGroup,
     *,
-    feature: str = "contacts",
+    feature: str | FeatureExtractor = "contacts",
     correction: CorrectionMethod = "fdr_bh",
     alpha: float = 0.05,
     confidence: float = 0.95,
     rng: RandomState = None,
 ) -> ComparisonReport:
-    """Compare two conditions per residue, with full statistics.
+    """Compare two conditions feature-by-feature, with full statistics.
 
     Extracts *feature* from every ensemble and dispatches to the engine:
 
     * **replicate mode** when both conditions have two or more replicates: each
-      replicate is reduced to its per-residue mean, giving one value per
+      replicate is reduced to its per-feature mean, giving one value per
       replicate, and the conditions are compared with a permutation test and
-      Hedges' g per residue, FDR-corrected across residues.
+      Hedges' g per feature, FDR-corrected across features.
     * **bootstrap mode** otherwise: the single run per condition is compared
       frame-by-frame with a block bootstrap. If a condition happens to carry
       extra replicates but the other does not, the extras are dropped with a
@@ -246,20 +246,27 @@ def compare_ensemble_groups(
     Parameters
     ----------
     group_a, group_b
-        The two conditions. Both must describe the same residues.
+        The two conditions. Both must describe the same features.
     feature
-        Name of a registered feature extractor; see :data:`FEATURES`.
+        Either the name of a registered feature extractor (see :data:`FEATURES`)
+        or a feature-extractor callable, e.g. one from
+        :func:`confdelta.geometry.geometric_features`.
     correction, alpha, confidence, rng
         Passed through to the engine.
 
     Returns
     -------
     ComparisonReport
-        Per-residue effect sizes, confidence intervals and corrected q-values.
+        Per-feature effect sizes, confidence intervals and corrected q-values.
     """
-    if feature not in FEATURES:
-        raise ValueError(f"Unknown feature {feature!r}. Available: {', '.join(sorted(FEATURES))}.")
-    extractor = FEATURES[feature]
+    if callable(feature):
+        extractor = feature
+    elif feature in FEATURES:
+        extractor = FEATURES[feature]
+    else:
+        raise ValueError(
+            f"Unknown feature {feature!r}. Available: {', '.join(sorted(FEATURES))}."
+        )
 
     labels_a, frames_a = _labels_for_group(group_a, extractor)
     labels_b, frames_b = _labels_for_group(group_b, extractor)

@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Geometric collective-variable feature** `geometric_features` (in
+  `confdelta.geometry`): build a feature extractor for user-chosen inter-residue
+  **distances** and **Cα-triplet angles** (residues named by number or
+  `CHAIN_RESID` label; Cα by default) and pass it straight to
+  `compare_ensemble_groups(feature=...)`, so a hand-picked reaction coordinate
+  (flap-opening distance, hinge angle) gets the same effect size, CI and
+  corrected q-value as any built-in feature. `compare_ensemble_groups` now
+  accepts a feature-extractor callable, not only a registry name.
 - **Per-residue mobility feature** `per_residue_rmsf` (registry name `"rmsf"`):
   Kabsch-superposes each frame onto the ensemble mean and returns the per-frame
   squared displacement per residue, so mobility (RMSF) is compared with the same

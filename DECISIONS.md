@@ -646,3 +646,23 @@ slow and allosteric and 100 ns undersamples it. This is confdelta's own thesis
 demonstrated on its own flagship: the honest move is to say so plainly and fix it
 with sampling, not to quietly keep the over-confident number. Related:
 [[confdelta-release]].
+
+### D-040 · Geometric CVs as a parameterised feature, via a callable extractor
+
+**Decision.** Add `confdelta.geometry.geometric_features(distances=..., angles=...,
+atom="CA")`, which returns a feature-extractor closure over the chosen
+inter-residue distances and Cα-triplet angles, and let `compare_ensemble_groups`
+accept a callable feature in addition to a registry name.
+
+**Reasoning.** The built-in features (`contacts`, `rmsf`) are parameterless and
+belong in the `FEATURES` registry. Geometric CVs are inherently *parameterised* —
+the user must say which residues — so a registry string cannot carry them. A
+builder that returns a `FeatureExtractor` keeps them first-class (same engine,
+same effect-size/CI/q-value treatment) without bloating the registry, and the
+one-line `compare_ensemble_groups` change (accept `str | FeatureExtractor`) is
+backward compatible. Residues are addressed by number, or by `CHAIN_RESID` label
+where a number is ambiguous across chains (an explicit error names the options);
+measurements default to the Cα. Validated against the hand-computed HIV-1
+protease flap-opening distance and flap-tip angle (identical to 0.1 Å / 0.1°).
+This is what the paper's flap-opening (D25–I50) and tip-angle metrics need, now
+as reusable CVs. Related: [[confdelta-release]].
