@@ -12,19 +12,29 @@ size / confidence interval / FDR-corrected q-value machinery.
 from confdelta import geometric_features
 
 cvs = geometric_features(
-    distances=[("A_25", "A_50")],          # one distance, in angstroms
-    angles=[("A_48", "A_49", "A_50")],     # one angle, in degrees
+    distances=[("A_25", "A_50")],                  # a distance, in angstroms
+    angles=[("A_48", "A_49", "A_50")],             # an angle, in degrees
+    dihedrals=[("A_47", "A_48", "A_49", "A_50")],  # a torsion, in (-180, 180] degrees
 )
 ```
 
-- A **distance** is a pair of residues; an **angle** is a triple, measured at the
-  *middle* residue (vertex in the centre). Pass as many as you like.
+- A **distance** is a pair of points; an **angle** is a triple (measured at the
+  *middle* point); a **dihedral** is a quadruple (the torsion about the central
+  bond). Pass as many as you like.
+- A **point** is a residue, or a **group** of residues measured at its centroid —
+  pass a list to compare, say, one domain against another:
+
+  ```python
+  geometric_features(distances=[(["A_23", "A_24", "A_25"], ["A_84", "A_85"])])
+  # label: dist:[A_23,A_24,A_25]-[A_84,A_85]
+  ```
+
 - Residues are named by **number** (`50`) or, where a number is ambiguous across
   chains, by **`CHAIN_RESID` label** (`"A_50"`). A plain number that matches more
   than one chain raises an error naming the options, so you never measure the
   wrong residue by accident.
-- Measurements use each residue's **Cα by default** (`atom="CA"`); pass
-  `atom="CB"` (etc.) to use another atom.
+- Points use each residue's **Cα by default** (`atom="CA"`); pass `atom="CB"`
+  (etc.) to use another atom.
 
 `geometric_features` returns a *feature extractor*, the same kind of object the
 built-in features are, so it drops straight into the comparison.

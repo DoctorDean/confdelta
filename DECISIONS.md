@@ -666,3 +666,23 @@ measurements default to the Cα. Validated against the hand-computed HIV-1
 protease flap-opening distance and flap-tip angle (identical to 0.1 Å / 0.1°).
 This is what the paper's flap-opening (D25–I50) and tip-angle metrics need, now
 as reusable CVs. Related: [[confdelta-release]].
+
+### D-041 · Toolkit extensions kept general: dihedrals, group CVs, RMSD-to-ref, custom escape hatch
+
+**Decision.** Extend the feature toolkit with four general capabilities, none
+system-specific: (1) **dihedrals** in `geometric_features` (the 4-point torsion,
+completing distance/angle/dihedral); (2) **group points** — any CV endpoint may
+be a list of residues measured at its centroid, for domain-scale CVs;
+(3) `per_residue_rmsd(reference)` — per-residue deviation from a user-supplied
+reference structure; (4) `feature_from_positions(fn, labels)` — wrap any per-frame
+coordinate function into a comparable feature, with `FeatureExtractor` made public.
+
+**Reasoning.** The maintainer's rule: ship *primitives*, never bake in a specific
+measurement (an I50–I50' distance is one line of `geometric_features`, not an API).
+Dihedrals and group centroids are general geometry; RMSD-to-reference is the
+natural complement to `rmsf` (deviation from a chosen structure vs spread about
+the ensemble mean); and `feature_from_positions` plus a public `FeatureExtractor`
+turn "bring your own observable" into a first-class, documented pattern — anything
+computable from coordinates flows through the same effect-size / CI / FDR engine.
+All validated against hand-computed values and closed-form geometry. Docs:
+`geometric_cvs.md`, `custom_features.md`. Related: [[confdelta-release]].

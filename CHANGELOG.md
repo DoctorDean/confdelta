@@ -17,12 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Geometric collective-variable feature** `geometric_features` (in
   `confdelta.geometry`): build a feature extractor for user-chosen inter-residue
-  **distances** and **Cα-triplet angles** (residues named by number or
-  `CHAIN_RESID` label; Cα by default) and pass it straight to
+  **distances**, **angles** and **dihedrals** (Cα by default; residues named by
+  number or `CHAIN_RESID` label), where any endpoint may be a **group** of
+  residues measured at its centroid (domain–domain CVs). Pass it straight to
   `compare_ensemble_groups(feature=...)`, so a hand-picked reaction coordinate
-  (flap-opening distance, hinge angle) gets the same effect size, CI and
-  corrected q-value as any built-in feature. `compare_ensemble_groups` now
-  accepts a feature-extractor callable, not only a registry name.
+  gets the same effect size, CI and corrected q-value as any built-in feature.
+  `compare_ensemble_groups` now accepts a feature-extractor callable, not only a
+  registry name.
+- **RMSD-to-reference feature** `per_residue_rmsd(reference, ...)`: per-residue
+  displacement from a user-supplied reference structure (a closed state, a
+  crystal structure), complementing `rmsf` (spread about the ensemble's own mean).
+- **Custom-observable escape hatch** `feature_from_positions(fn, labels, ...)`:
+  wrap any per-frame function of coordinates into a comparable feature. The
+  `FeatureExtractor` type is now public.
 - **Per-residue mobility feature** `per_residue_rmsf` (registry name `"rmsf"`):
   Kabsch-superposes each frame onto the ensemble mean and returns the per-frame
   squared displacement per residue, so mobility (RMSF) is compared with the same
