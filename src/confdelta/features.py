@@ -19,11 +19,11 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 
-from ._align import superpose_to_mean
+from ._align import superpose_to_mean, superpose_to_reference
 from .compare import ComparisonReport, compare_feature_matrices, compare_frame_matrices
 from .ensemble import Ensemble, EnsembleGroup
 from .stats import CorrectionMethod, RandomState
@@ -34,13 +34,28 @@ __all__ = [
     "FeatureExtractor",
     "per_residue_contact_counts",
     "per_residue_rmsf",
+    "per_residue_rmsd",
+    "feature_from_positions",
     "compare_ensemble_groups",
     "FEATURES",
 ]
 
-# A feature extractor maps an ensemble to (residue labels, per-frame values),
-# where per-frame values has shape (n_frames, n_residues).
+# A feature extractor maps an ensemble to (feature labels, per-frame values),
+# where per-frame values has shape (n_frames, n_features).
 FeatureExtractor = Callable[[Ensemble], tuple[list[str], np.ndarray]]
+
+
+def _reduce_atoms_to_residues(sq_atom: np.ndarray, atom_res: np.ndarray, n_res: int) -> np.ndarray:
+    """Average a per-atom, per-frame quantity over each residue's atoms.
+
+    ``sq_atom`` is ``(n_frames, n_atoms)``; returns ``(n_frames, n_residues)``.
+    """
+    n_atoms = sq_atom.shape[1]
+    atoms_per_res = np.bincount(atom_res, minlength=n_res).astype(float)
+    atoms_per_res[atoms_per_res == 0.0] = 1.0
+    membership = np.zeros((n_res, n_atoms), dtype=float)
+    membership[atom_res, np.arange(n_atoms)] = 1.0
+    return (sq_atom @ membership.T) / atoms_per_res
 
 
 def _residue_chain_and_number(labels: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -183,14 +198,137 @@ def per_residue_rmsf(
     aligned = superpose_to_mean(coords, align_cols)
     mean_pos = aligned.mean(axis=0)
     sq_atom = ((aligned - mean_pos) ** 2).sum(axis=2)  # (n_frames, n_atoms), angstrom^2
-
-    # Reduce atoms -> residues: mean squared displacement over each residue's atoms.
-    atoms_per_res = np.bincount(atom_res, minlength=n_res).astype(float)
-    atoms_per_res[atoms_per_res == 0.0] = 1.0
-    membership = np.zeros((n_res, n_atoms), dtype=float)
-    membership[atom_res, np.arange(n_atoms)] = 1.0
-    values = (sq_atom @ membership.T) / atoms_per_res
+    values = _reduce_atoms_to_residues(sq_atom, atom_res, n_res)
     return labels, values
+
+
+def _collect_coords(sim) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
+    """Return ``(coords, atom_res, residue_labels, atom_names)`` for a simulation.
+
+    ``coords`` is ``(n_frames, n_atoms, 3)`` collected over the trajectory.
+    """
+    labels = [str(k) for k in sim.unique_residue_keys]
+    atom_res = np.asarray(sim._atom_to_residue_map)
+    atoms = sim._atoms
+    n_atoms = len(atom_res)
+    coords = np.empty((len(sim.universe.trajectory), n_atoms, 3), dtype=float)
+    for i, _ in enumerate(sim.universe.trajectory):
+        coords[i] = atoms.positions
+    return coords, atom_res, labels, np.asarray(atoms.names)
+
+
+def per_residue_rmsd(
+    reference: Ensemble,
+    *,
+    align_selection: str | None = None,
+) -> FeatureExtractor:
+    """Per-residue displacement from a fixed *reference* structure.
+
+    Builds a feature extractor that, for each frame, rigid-body superposes onto
+    the *reference* (Kabsch, on *align_selection*, default all atoms) and returns
+    each residue's squared displacement from the reference position. The per-frame
+    mean is the residue's mean-square deviation; its square root is the per-residue
+    RMSD to the reference. Where ``rmsf`` measures spread about the ensemble's own
+    mean, this measures deviation from a structure *you* choose (a closed state, a
+    crystal structure), so "which residues sit furthest from the reference, and
+    does that differ between conditions?" is answered with the usual statistics.
+
+    Parameters
+    ----------
+    reference
+        The reference ensemble; its mean structure is the target. Pass a
+        single-structure ensemble to reference one conformation.
+    align_selection
+        MDAnalysis selection for the rigid-body fit (default: all atoms).
+
+    Returns
+    -------
+    FeatureExtractor
+        Values are squared displacement in angstrom^2, shape
+        ``(n_frames, n_residues)``; ``sqrt(mean_a)`` recovers the RMSD profile.
+    """
+    with contextlib.redirect_stdout(io.StringIO()):
+        ref_sim = reference.to_simulation()
+    ref_coords, _, ref_labels, _ = _collect_coords(ref_sim)
+    ref_mean = ref_coords.mean(axis=0)
+
+    def extractor(ensemble: Ensemble) -> tuple[list[str], np.ndarray]:
+        with contextlib.redirect_stdout(io.StringIO()):
+            sim = ensemble.to_simulation()
+        coords, atom_res, labels, _ = _collect_coords(sim)
+        if labels != ref_labels:
+            raise ValueError(
+                "The reference describes different residues than the ensemble; they "
+                "must be the same system with the same selection."
+            )
+        n_atoms = coords.shape[1]
+        if align_selection is None:
+            align_cols = np.arange(n_atoms)
+        else:
+            chosen = sim.universe.select_atoms(align_selection)
+            position_of = {a: c for c, a in enumerate(sim._atoms.ix)}
+            align_cols = np.array(
+                [position_of[a] for a in chosen.ix if a in position_of], dtype=int
+            )
+            if align_cols.size == 0:
+                raise ValueError(
+                    f"align_selection {align_selection!r} matched no atoms in the ensemble."
+                )
+        aligned = superpose_to_reference(coords, ref_mean, align_cols)
+        sq_atom = ((aligned - ref_mean) ** 2).sum(axis=2)
+        return labels, _reduce_atoms_to_residues(sq_atom, atom_res, sim.n_residues)
+
+    return extractor
+
+
+def feature_from_positions(
+    fn: Callable[[np.ndarray], np.ndarray],
+    *,
+    labels: Sequence[str],
+    selection: str | None = None,
+) -> FeatureExtractor:
+    """Wrap a per-frame function of coordinates into a feature extractor.
+
+    This is the escape hatch for observables confdelta does not ship: *fn* is
+    called once per frame with the selected atoms' positions (shape
+    ``(n_selected_atoms, 3)``) and must return one value per entry in *labels*.
+    The resulting extractor plugs into ``compare_ensemble_groups(feature=...)``
+    like any built-in, so any quantity you can compute from coordinates gets the
+    same effect sizes, confidence intervals and corrected q-values.
+
+    Parameters
+    ----------
+    fn
+        Maps a frame's ``(n_atoms, 3)`` positions to a 1-D array of length
+        ``len(labels)``.
+    labels
+        Names for the values *fn* returns; also fixes how many it must return.
+    selection
+        MDAnalysis selection for the atoms passed to *fn* (default: the whole
+        ensemble selection).
+    """
+    labels = list(labels)
+    if not labels:
+        raise ValueError("Provide at least one label.")
+
+    def extractor(ensemble: Ensemble) -> tuple[list[str], np.ndarray]:
+        with contextlib.redirect_stdout(io.StringIO()):
+            sim = ensemble.to_simulation()
+        atoms = sim._atoms if selection is None else sim.universe.select_atoms(selection)
+        if len(atoms) == 0:
+            raise ValueError(f"selection {selection!r} matched no atoms.")
+        n_frames = ensemble.n_frames
+        values = np.empty((n_frames, len(labels)), dtype=float)
+        for f, _ in enumerate(sim.universe.trajectory):
+            out = np.asarray(fn(atoms.positions), dtype=float).ravel()
+            if out.shape[0] != len(labels):
+                raise ValueError(
+                    f"fn returned {out.shape[0]} values but {len(labels)} labels were given."
+                )
+            values[f] = out
+        return labels, values
+
+    return extractor
 
 
 # Registry of named feature extractors, so the CLI/config can select by name.

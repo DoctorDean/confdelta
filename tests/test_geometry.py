@@ -77,15 +77,15 @@ class TestResidueResolution:
 
 class TestSpecValidation:
     def test_empty_spec_rejected(self):
-        with pytest.raises(ValueError, match="at least one distance or angle"):
+        with pytest.raises(ValueError, match="at least one distance, angle or dihedral"):
             geometric_features()
 
     def test_wrong_distance_arity_rejected(self):
-        with pytest.raises(ValueError, match="exactly two residues"):
+        with pytest.raises(ValueError, match="Distance CVs take exactly 2 points"):
             geometric_features(distances=[(1, 2, 3)])
 
     def test_wrong_angle_arity_rejected(self):
-        with pytest.raises(ValueError, match="exactly three residues"):
+        with pytest.raises(ValueError, match="Angle CVs take exactly 3 points"):
             geometric_features(angles=[(1, 2)])
 
 
@@ -105,3 +105,51 @@ class TestComparisonIntegration:
         dist_cv = next(f for f in report.features if f.feature == "dist:A_1-A_3")
         # 1-3 distance moved from 5 to ~9; the two conditions clearly differ.
         assert abs(dist_cv.difference) > 1.0
+
+
+class TestDihedrals:
+    def test_trans_and_cis_dihedrals(self, tmp_path):
+        # Four residues; a planar arrangement gives a 0 or 180 degree torsion.
+        trans = [
+            ("A", 1, (0.0, 1.0, 0.0)),
+            ("A", 2, (0.0, 0.0, 0.0)),
+            ("A", 3, (1.0, 0.0, 0.0)),
+            ("A", 4, (1.0, -1.0, 0.0)),
+        ]
+        cis = trans[:3] + [("A", 4, (1.0, 1.0, 0.0))]
+        vt = geometric_features(dihedrals=[(1, 2, 3, 4)])(_ca_ensemble(tmp_path, trans, name="t"))[
+            1
+        ]
+        vc = geometric_features(dihedrals=[(1, 2, 3, 4)])(_ca_ensemble(tmp_path, cis, name="c"))[1]
+        assert abs(abs(vt[0, 0]) - 180.0) < 1e-2
+        assert abs(vc[0, 0]) < 1e-2
+
+    def test_dihedral_label(self, tmp_path):
+        ens = _ca_ensemble(tmp_path, TRIANGLE + [("A", 4, (5.0, 5.0, 1.0))], name="d")
+        labels, _ = geometric_features(dihedrals=[(1, 2, 3, 4)])(ens)
+        assert labels == ["dihedral:A_1-A_2-A_3-A_4"]
+
+    def test_wrong_dihedral_arity_rejected(self):
+        with pytest.raises(ValueError, match="Dihedral CVs take exactly 4 points"):
+            geometric_features(dihedrals=[(1, 2, 3)])
+
+
+class TestGroupPoints:
+    def test_group_centroid_distance(self, tmp_path):
+        # Group {1,2} centroid is (1,0,0); residue 3 is at (1,5,0) -> distance 5.
+        atoms = [("A", 1, (0.0, 0.0, 0.0)), ("A", 2, (2.0, 0.0, 0.0)), ("A", 3, (1.0, 5.0, 0.0))]
+        ens = _ca_ensemble(tmp_path, atoms, name="grp")
+        labels, values = geometric_features(distances=[(["A_1", "A_2"], "A_3")])(ens)
+        assert labels == ["dist:[A_1,A_2]-A_3"]
+        np.testing.assert_allclose(values[:, 0], 5.0, atol=1e-4)
+
+    def test_group_member_ambiguity_rejected(self, tmp_path):
+        atoms = [
+            ("A", 1, (0.0, 0, 0)),
+            ("A", 2, (3.0, 0, 0)),
+            ("B", 1, (0, 5.0, 0)),
+            ("B", 2, (3.0, 5.0, 0)),
+        ]
+        ens = _ca_ensemble(tmp_path, atoms, name="dimer")
+        with pytest.raises(ValueError, match="ambiguous across chains"):
+            geometric_features(distances=[([1, 2], "A_1")])(ens)

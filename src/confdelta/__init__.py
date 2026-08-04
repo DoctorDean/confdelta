@@ -56,7 +56,12 @@ from .differential import (
     DifferentialConfig,
 )
 from .ensemble import Ensemble, EnsembleError, EnsembleGroup
-from .features import compare_ensemble_groups
+from .features import (
+    FeatureExtractor,
+    compare_ensemble_groups,
+    feature_from_positions,
+    per_residue_rmsd,
+)
 from .geometry import geometric_features
 from .interface import (
     InterfacePersistence,
@@ -74,6 +79,9 @@ __all__ = [
     # Statistical comparison (the core capability).
     "compare_ensemble_groups",
     "geometric_features",
+    "per_residue_rmsd",
+    "feature_from_positions",
+    "FeatureExtractor",
     "ComparisonReport",
     "FeatureComparison",
     # Interface persistence (design triage).

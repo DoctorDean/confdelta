@@ -38,3 +38,28 @@ def superpose_to_mean(coords: np.ndarray, align_cols: np.ndarray, *, passes: int
         ref_centroid = ref.mean(axis=0)
         ref_centered = ref - ref_centroid
     return aligned
+
+
+def superpose_to_reference(
+    coords: np.ndarray, reference: np.ndarray, align_cols: np.ndarray
+) -> np.ndarray:
+    """Least-squares superpose every frame onto a fixed *reference* structure.
+
+    ``coords`` is ``(n_frames, n_atoms, 3)`` and ``reference`` is ``(n_atoms, 3)``;
+    ``align_cols`` indexes the atoms the fit is computed on. Returns the aligned
+    coordinates (all atoms). Unlike :func:`superpose_to_mean`, the target is the
+    given reference, so a single pass suffices.
+    """
+    aligned = coords.copy()
+    ref_centroid = reference[align_cols].mean(axis=0)
+    ref_centered = reference[align_cols] - ref_centroid
+    for f in range(aligned.shape[0]):
+        mobile = aligned[f, align_cols, :]
+        mob_centroid = mobile.mean(axis=0)
+        mob_centered = mobile - mob_centroid
+        h = mob_centered.T @ ref_centered
+        u, _, vt = np.linalg.svd(h)
+        d = np.sign(np.linalg.det(vt.T @ u.T))
+        rot = vt.T @ np.diag([1.0, 1.0, d]) @ u.T
+        aligned[f] = (aligned[f] - mob_centroid) @ rot.T + ref_centroid
+    return aligned
