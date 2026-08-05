@@ -37,10 +37,11 @@ That is the whole token-free setup. It only has to be done once.
 1. Make sure `master` is green and the version in
    [`src/confdelta/_version.py`](../src/confdelta/_version.py) is what you want
    (it is the single source of truth; `pyproject.toml` reads it dynamically).
-   confdelta follows semantic versioning; `0.1.0` is the first public release.
+   confdelta follows semantic versioning (`0.1.0` was the first public release;
+   `0.2.0` adds features).
 
 2. Tag and publish a **GitHub Release** named for the version (e.g. tag
-   `v0.1.0`, release title `v0.1.0`). Publishing the release triggers
+   `v0.2.0`, release title `v0.2.0`). Publishing the release triggers
    `publish.yml`, which builds and uploads to PyPI via OIDC. `publish.yml` must
    already be on the **default branch** for the release event to find it.
 
@@ -62,7 +63,7 @@ built distribution once with an API token. This uses a token (unlike the route
 above), so do it yourself — do not paste tokens into shared tooling:
 
 ```bash
-python -m build                 # writes dist/confdelta-0.1.0*
+python -m build                 # writes dist/confdelta-0.2.0*
 python -m twine check dist/*    # both files should PASS
 python -m twine upload dist/*   # username: __token__   password: <your PyPI token>
 ```

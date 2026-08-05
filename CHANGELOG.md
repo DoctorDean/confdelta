@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-03
+
 ### Added
 
 - **Geometric collective-variable feature** `geometric_features` (in
@@ -30,6 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom-observable escape hatch** `feature_from_positions(fn, labels, ...)`:
   wrap any per-frame function of coordinates into a comparable feature. The
   `FeatureExtractor` type is now public.
+
+### Changed
+
+- **Flagship sampling caveat.** The committed cantilever result is a single 100 ns
+  run per condition; a two-replicate plus within-run convergence check shows the
+  flap effect is undersampled at 100–250 ns and not replicate-confirmed. The
+  README, `reproduce.py` and `test_flagship.py` now say so (DECISIONS D-039); the
+  reproduction stands as a workflow demonstration, not a settled claim.
+
+## [0.1.0] - 2026-07-29
+
+### Added
+
 - **Per-residue mobility feature** `per_residue_rmsf` (registry name `"rmsf"`):
   Kabsch-superposes each frame onto the ensemble mean and returns the per-frame
   squared displacement per residue, so mobility (RMSF) is compared with the same

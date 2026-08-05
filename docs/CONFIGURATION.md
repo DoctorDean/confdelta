@@ -141,9 +141,12 @@ with a default the user did not intend and never finding out.
 
 ## What is deliberately absent
 
-confdelta 0.1.0 reports **descriptive differences only**. There is no
-significance testing, no effect-size estimation and no multiple-testing
-correction, so there are no options to configure them.
+The config file's differential/network comparators report **descriptive
+differences only** — node and edge deltas, correlation-matrix differences and the
+like — with no significance testing or effect sizes, so there are no options to
+configure them here. (Statistical comparison with effect sizes, confidence
+intervals and corrected q-values is the separate `compare_ensemble_groups` API,
+with the feature chosen by `statistical_feature`; see the README.)
 
 An earlier version accepted `perform_statistical_tests`,
 `significance_threshold`, `multiple_comparison_correction`,
